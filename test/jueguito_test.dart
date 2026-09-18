@@ -77,4 +77,71 @@ void main() {
       expect(identical(zona1, zona2), isTrue);
     });
   });
+
+  group('Pruebas de Inserción y Reglas de Tipos', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas();
+      tablero = Tablero(capa);
+    });
+
+    test('Casilla estaVacia funciona correctamente', () {
+      var casilla = tablero.obtenerCasilla(0, 0);
+      expect(casilla.estaVacia, isTrue);
+      
+      tablero.intentarColocarNumero(0, 0, 5);
+      expect(casilla.estaVacia, isFalse);
+      expect(casilla.valor, 5);
+    });
+
+    test('Zona VE (Verde): Permite cualquier número repetido o distinto', () {
+      // Coordenadas (0,4) y (0,3) son VE1 en el nuevo mapa
+      expect(tablero.intentarColocarNumero(0, 4, 3), isTrue, reason: 'Debe permitir el primer número');
+      expect(tablero.intentarColocarNumero(0, 3, 3), isTrue, reason: 'Debe permitir repetir número');
+      expect(tablero.intentarColocarNumero(1, 6, 7), isTrue, reason: 'Debe permitir número distinto');
+    });
+
+    test('Zona RO (Rojo) y AM (Amarillo): Todos los números deben ser distintos', () {
+      // Coordenadas (1,4) y (1,3) son RO1
+      expect(tablero.intentarColocarNumero(1, 4, 3), isTrue);
+      expect(tablero.intentarColocarNumero(1, 3, 3), isFalse, reason: 'No debe permitir repetir el 3 en zona Roja');
+      expect(tablero.intentarColocarNumero(1, 3, 5), isTrue, reason: 'Debe permitir un número distinto (5)');
+
+      // Coordenadas (0,0) y (6,6) son AM
+      expect(tablero.intentarColocarNumero(0, 0, 9), isTrue);
+      expect(tablero.intentarColocarNumero(6, 6, 9), isFalse, reason: 'No debe permitir repetir el 9 en el borde Amarillo');
+    });
+
+    test('Zona AZ (Azul): Todos los números deben ser iguales', () {
+      // Coordenadas (2,5) y (3,5) son AZ1
+      expect(tablero.intentarColocarNumero(2, 5, 4), isTrue);
+      expect(tablero.intentarColocarNumero(3, 5, 7), isFalse, reason: 'No debe permitir un número distinto (7)');
+      expect(tablero.intentarColocarNumero(3, 5, 4), isTrue, reason: 'Debe permitir repetir el 4');
+    });
+
+    test('Zona MO (Morado): Máximo dos números diferentes por zona', () {
+      // Coordenadas (3,6) y (4,6) son MO1
+      expect(tablero.intentarColocarNumero(3, 6, 1), isTrue, reason: 'Permite el primer número (1)');
+      expect(tablero.intentarColocarNumero(4, 6, 2), isTrue, reason: 'Permite un segundo número diferente (2)');
+      
+      // Intentamos en otra coordenada de MO1 (por ejemplo 4,5)
+      expect(tablero.intentarColocarNumero(4, 5, 3), isFalse, reason: 'No permite un tercer número diferente (3)');
+      expect(tablero.intentarColocarNumero(4, 5, 1), isTrue, reason: 'Sí permite repetir uno de los ya existentes (1)');
+    });
+    
+    test('Sobreescribir un número en la misma casilla se valida contra el resto de la zona', () {
+      // (1,4) y (2,4) son RO1
+      tablero.intentarColocarNumero(1, 4, 3);
+      tablero.intentarColocarNumero(2, 4, 4);
+      
+      // Intento cambiar el 3 por un 4 (debería fallar porque ya hay un 4 en la zona)
+      expect(tablero.intentarColocarNumero(1, 4, 4), isFalse);
+      
+      // Intento cambiar el 3 por un 5 (debería tener éxito)
+      expect(tablero.intentarColocarNumero(1, 4, 5), isTrue);
+      expect(tablero.obtenerCasilla(1, 4).valor, 5);
+    });
+  });
 }
