@@ -1,5 +1,6 @@
 import 'dart:ui';
 abstract class Tipo{
+  const Tipo();
   Color get color;
   String get descripcion;
   bool esPosibleAgregar(List<int> actuales, int posible);
@@ -7,6 +8,7 @@ abstract class Tipo{
 }
 
 class TipoAzul extends Tipo{
+  const TipoAzul();
  
   @override
   Color get color => const Color(0xFF0000FF);
@@ -27,6 +29,8 @@ class TipoAzul extends Tipo{
 }
 
 class TipoVerde extends Tipo {
+  const TipoVerde();
+
   @override
   Color get color => const Color(0xFF4CAF50);
  
@@ -47,6 +51,8 @@ class TipoVerde extends Tipo {
 }
 
 class TipoMorado extends Tipo {
+  const TipoMorado();
+
   @override
   Color get color => const Color(0xFF9C27B0);
  
@@ -68,6 +74,8 @@ class TipoMorado extends Tipo {
 }
 
 class TipoAmarillo extends Tipo {
+  const TipoAmarillo();
+
   @override
   Color get color => const Color(0xFFFFC107);
  
@@ -88,6 +96,8 @@ class TipoAmarillo extends Tipo {
 }
 
 class TipoRojo extends Tipo {
+  const TipoRojo();
+  
   @override
   Color get color => const Color(0xFFF44336);
  

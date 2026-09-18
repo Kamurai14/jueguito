@@ -1,13 +1,11 @@
 import 'package:jueguito/region.dart';
 
 class Casilla {
-  final Coordenada coordenada; 
-  final Region region;         
-  int? valor;                  
+  final Coordenada coordenada;
+  int? valor;
 
   Casilla({
     required this.coordenada,
-    required this.region,
     this.valor,
   });
 
