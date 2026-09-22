@@ -13,6 +13,16 @@ class Tablero {
 
   void _construirTableroEnBlanco() {
     _cuadricula = [];
+
+    List<Coordenada> coordenadasIniciales = [
+      Coordenada(2, 6), // Fila de arriba, casilla azul
+      Coordenada(5, 5), // Fila abajo, segunda morada
+      Coordenada(1, 3), // Dos filas abajo, casilla roja
+      Coordenada(4, 3), // Misma fila, primera verde de las 3
+      Coordenada(2, 1), // Dos filas abajo, casilla morada
+      Coordenada(4, 0)  // Fila de hasta abajo, segunda roja
+];
+
     for (int filaMatriz = 0; filaMatriz < tamano; filaMatriz++) {
       List<Casilla> filaCasillas = [];
       for (int colMatriz = 0; colMatriz < tamano; colMatriz++) {
@@ -74,5 +84,20 @@ class Tablero {
     } else {
       return false; 
     }
+  }
+
+  bool esValidoParaInicial(int numero) {
+    if (numero < 1 || numero > 6) return false; // Solo números del 1 al 6
+
+    // Revisamos todas las casillas para ver si ya se usó este número en otra casilla inicial
+    for (int fila = 0; fila < tamano; fila++) {
+      for (int col = 0; col < tamano; col++) {
+        Casilla casilla = _cuadricula[fila][col];
+        if (casilla.esInicial && casilla.valor == numero) {
+          return false; // El número ya está puesto en otra casilla especial
+        }
+      }
+    }
+    return true; // El número es válido y no se ha repetido
   }
 }
