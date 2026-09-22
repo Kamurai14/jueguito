@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:jueguito/casilla.dart';
 import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
@@ -142,6 +142,42 @@ void main() {
       // Intento cambiar el 3 por un 5 (debería tener éxito)
       expect(tablero.intentarColocarNumero(1, 4, 5), isTrue);
       expect(tablero.obtenerCasilla(1, 4).valor, 5);
+    });
+  });
+
+  group('Pruebas de Casillas Iniciales y Fase de Preparación', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas();
+      tablero = Tablero(capa);
+    });
+
+    test('Las casillas iniciales se marcan correctamente en el tablero', () {
+      // Verificamos un par de coordenadas que sí deben ser iniciales
+      expect(tablero.obtenerCasilla(2, 6).esInicial, isTrue);
+      expect(tablero.obtenerCasilla(4, 0).esInicial, isTrue);
+
+      // Verificamos una coordenada normal que NO debe ser inicial
+      expect(tablero.obtenerCasilla(0, 0).esInicial, isFalse);
+    });
+
+    test('Validación permite solo números del 1 al 6', () {
+      expect(tablero.esValidoParaInicial(3), isTrue, reason: 'El 3 es un número válido');
+      expect(tablero.esValidoParaInicial(7), isFalse, reason: 'No debe permitir mayores a 6');
+      expect(tablero.esValidoParaInicial(0), isFalse, reason: 'No debe permitir menores a 1');
+    });
+
+    test('Validación rechaza números repetidos en casillas iniciales', () {
+      // Forzamos un 4 en la primera casilla inicial
+      tablero.obtenerCasilla(2, 6).valor = 4;
+
+      // Intentamos validar un 4 para otra jugada (debería fallar porque ya se usó)
+      expect(tablero.esValidoParaInicial(4), isFalse, reason: 'El 4 ya está en el tablero');
+      
+      // Intentamos validar un 5 (debería pasar porque está libre)
+      expect(tablero.esValidoParaInicial(5), isTrue, reason: 'El 5 no se ha usado');
     });
   });
 }

@@ -13,7 +13,7 @@ class Tablero {
 
   void _construirTableroEnBlanco() {
     _cuadricula = [];
-
+    
     List<Coordenada> coordenadasIniciales = [
       Coordenada(2, 6), // Fila de arriba, casilla azul
       Coordenada(5, 5), // Fila abajo, segunda morada
@@ -21,7 +21,7 @@ class Tablero {
       Coordenada(4, 3), // Misma fila, primera verde de las 3
       Coordenada(2, 1), // Dos filas abajo, casilla morada
       Coordenada(4, 0)  // Fila de hasta abajo, segunda roja
-];
+    ];
 
     for (int filaMatriz = 0; filaMatriz < tamano; filaMatriz++) {
       List<Casilla> filaCasillas = [];
@@ -29,8 +29,15 @@ class Tablero {
         int cartesianoX = colMatriz;
         int cartesianoY = (tamano - 1) - filaMatriz;
         
+        bool esEspecial = coordenadasIniciales.any(
+          (c) => c.x == cartesianoX && c.y == cartesianoY
+        );
+        
         filaCasillas.add(
-          Casilla(coordenada: Coordenada(cartesianoX, cartesianoY))
+          Casilla(
+            coordenada: Coordenada(cartesianoX, cartesianoY),
+            esInicial: esEspecial, 
+          )
         );
       }
       _cuadricula.add(filaCasillas);
