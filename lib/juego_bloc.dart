@@ -46,7 +46,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     // EL BLOQUEO PRINCIPAL: Si no estamos en JuegoActivo, la jugada se rechaza automáticamente.
     if (state is! JuegoActivo) return;
 
-    // Usamos la lógica de validación que ya programamos en tu Tablero
     bool esValido = state.tablero.intentarColocarNumero(event.x, event.y, event.valor);
 
     if (esValido) {
