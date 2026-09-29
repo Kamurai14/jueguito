@@ -107,4 +107,37 @@ class Tablero {
     }
     return true; // El número es válido y no se ha repetido
   }
+
+  // Busca la casilla inicial que ya tiene un número específico
+  Casilla? buscarCasillaInicialConValor(int numero) {
+    int tamanoActual = _cuadricula.length; // Tomamos el tamaño real dinámicamente
+
+    for (int fila = 0; fila < tamanoActual; fila++) {
+      for (int col = 0; col < tamanoActual; col++) {
+        Casilla c = _cuadricula[fila][col];
+        if (c.esInicial && c.valor == numero) {
+          return c;
+        }
+      }
+    }
+    return null; 
+  }
+
+  // Cuenta dinámicamente cuántas casillas iniciales ya están llenas
+  int contarNumerosIniciales() {
+    int contador = 0;
+    int tamanoActual = _cuadricula.length; // Tomamos el tamaño real dinámicamente
+
+    for (int fila = 0; fila < tamanoActual; fila++) {
+      for (int col = 0; col < tamanoActual; col++) {
+        if (_cuadricula[fila][col].esInicial && _cuadricula[fila][col].valor != null) {
+          contador++;
+        }
+      }
+    }
+    return contador;
+  }
+
 }
+
+

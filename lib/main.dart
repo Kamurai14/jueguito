@@ -27,7 +27,6 @@ class MiJuegoApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      // AQUÍ ESTÁ EL BLOC PROVIDER ENVOLVIENDO LA PANTALLA PRINCIPAL
       home: BlocProvider(
         create: (context) => JuegoBloc(tablero),
         child: const PantallaTablero(),
@@ -84,13 +83,14 @@ class PantallaTablero extends StatelessWidget {
 
                         return GestureDetector(
                           onTap: () {
-                            if (casilla.esInicial && state is JuegoEsperandoIniciales) {
-                              _mostrarSelectorNumero(context, x, y);
+                            // Ya no lo limitamos, permitimos editar aunque el botón esté en verde
+                            if (casilla.esInicial) {
+                              _mostrarSelectorNumero(context, x, y, state);
                             }
                           },
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.grey[300], // Pronto pondremos tus colores aquí
+                              color: Colors.grey[300], 
                               border: Border.all(color: Colors.black12),
                             ),
                             child: Stack(
@@ -117,19 +117,16 @@ class PantallaTablero extends StatelessWidget {
                   ),
                 ),
                 
-                // NUEVO: Botón de Iniciar en la parte inferior
+                // Botón de Iniciar en la parte inferior
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24.0),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      // Si está listo es verde, de lo contrario es gris
                       backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                     ),
-                    // Al asignarle 'null' al onPressed, Flutter desactiva el botón automáticamente
                     onPressed: estaListoParaIniciar 
                       ? () {
-                          // Aquí irá la lógica de la siguiente pantalla o fase del juego
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('¡Comienza la partida!')),
                           );
@@ -153,7 +150,8 @@ class PantallaTablero extends StatelessWidget {
     );
   }
 
-  void _mostrarSelectorNumero(BuildContext context, int x, int y) {
+  // Método actualizado que recibe el state para buscar si el número ya existe
+  void _mostrarSelectorNumero(BuildContext context, int x, int y, JuegoState state) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -165,8 +163,21 @@ class PantallaTablero extends StatelessWidget {
               int numero = index + 1;
               return ElevatedButton(
                 onPressed: () {
-                  context.read<JuegoBloc>().add(InsertarValorInicial(x, y, numero));
+                  // 1. Revisamos si el número ya existe en el tablero
+                  Casilla? existente = state.tablero.buscarCasillaInicialConValor(numero);
+                  
+                  // Cerramos la ventana de selección
                   Navigator.of(dialogContext).pop(); 
+
+                  if (existente != null && (existente.coordenada.x != x || existente.coordenada.y != y)) {
+                    // 2. Si existe en otro lado, mostramos la alerta de confirmación
+                    _mostrarConfirmacionReemplazo(
+                      context, existente.coordenada.x, existente.coordenada.y, x, y, numero
+                    );
+                  } else {
+                    // 3. Si no existe, lo insertamos normal
+                    context.read<JuegoBloc>().add(InsertarValorInicial(x, y, numero));
+                  }
                 },
                 child: Text(numero.toString()),
               );
@@ -174,32 +185,35 @@ class PantallaTablero extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  // Método para confirmar si se quiere mover el número
+  void _mostrarConfirmacionReemplazo(BuildContext context, int xOrigen, int yOrigen, int xDestino, int yDestino, int numero) {
+    showDialog(
+      context: context,
+      builder: (BuildContext confirmContext) {
+        return AlertDialog(
+          title: const Text('Número ya utilizado'),
+          content: Text('El número $numero ya está en otra casilla. ¿Deseas moverlo a esta nueva posición?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(confirmContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Enviamos el evento para moverlo
+                context.read<JuegoBloc>().add(
+                  MoverValorInicial(xOrigen, yOrigen, xDestino, yDestino, numero)
+                );
+                Navigator.of(confirmContext).pop();
+              },
+              child: const Text('Sí, mover'),
+            ),
+          ],
+        );
+      }
     );
   }
 }
-
-  // Ventana emergente para elegir un número del 1 al 6
-  void _mostrarSelectorNumero(BuildContext context, int x, int y) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Elige un número'),
-          content: Wrap(
-            spacing: 10,
-            children: List.generate(6, (index) {
-              int numero = index + 1;
-              return ElevatedButton(
-                onPressed: () {
-                  // Enviamos el evento al BLoC
-                  context.read<JuegoBloc>().add(InsertarValorInicial(x, y, numero));
-                  Navigator.of(dialogContext).pop(); // Cerramos el diálogo
-                },
-                child: Text(numero.toString()),
-              );
-            }),
-          ),
-        );
-      },
-    );
-  }

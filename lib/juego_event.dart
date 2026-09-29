@@ -17,3 +17,13 @@ class HacerJugada extends JuegoEvent {
 
   HacerJugada(this.x, this.y, this.valor);
 }
+
+class MoverValorInicial extends JuegoEvent {
+  final int xOrigen;
+  final int yOrigen;
+  final int xDestino;
+  final int yDestino;
+  final int valor;
+
+  MoverValorInicial(this.xOrigen, this.yOrigen, this.xDestino, this.yDestino, this.valor);
+}

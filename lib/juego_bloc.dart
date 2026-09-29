@@ -1,59 +1,49 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jueguito/tablero.dart';
-import 'juego_event.dart';
-import 'juego_state.dart';
 import 'package:jueguito/casilla.dart';
+import 'package:jueguito/juego_event.dart';
+import 'package:jueguito/juego_state.dart';
+import 'package:jueguito/tablero.dart';
 
 class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
-  // Manejamos un contador interno para los números iniciales
-  int _valoresInicialesInsertados = 0;
-  final int _totalRequeridos = 6;
-
-  JuegoBloc(Tablero tableroInicial) 
-    : super(JuegoEsperandoIniciales(tableroInicial, numerosColocados: 0)) {
-    
+  JuegoBloc(Tablero tablero) : super(JuegoEsperandoIniciales(tablero, numerosColocados: 0)) {
     on<InsertarValorInicial>(_onInsertarValorInicial);
-    on<HacerJugada>(_onHacerJugada);
+    on<MoverValorInicial>(_onMoverValorInicial);
+    on<HacerJugada>(_onHacerJugada); 
   }
 
   void _onInsertarValorInicial(InsertarValorInicial event, Emitter<JuegoState> emit) {
-    if (state is JuegoActivo) return;
-
-    Casilla casillaTarget = state.tablero.obtenerCasilla(event.x, event.y);
-
-    // 1. Validar que el jugador esté tocando una casilla con estrellita
-    if (!casillaTarget.esInicial) return; 
-
-    // 2. Validar que el número sea del 1 al 6 y no se repita
-    if (state.tablero.esValidoParaInicial(event.valor)) {
-      
-      // Si pasa la prueba, lo guardamos
-      casillaTarget.valor = event.valor;
-      _valoresInicialesInsertados++;
-
-      if (_valoresInicialesInsertados >= _totalRequeridos) {
-        emit(JuegoActivo(state.tablero)); // ¡Fase completada, a jugar!
-      } else {
-        emit(JuegoEsperandoIniciales(
-          state.tablero, 
-          numerosColocados: _valoresInicialesInsertados
-      ));
+    Casilla target = state.tablero.obtenerCasilla(event.x, event.y);
+    
+    if (target.esInicial) {
+      target.valor = event.valor;
+      _actualizarEstadoInicial(emit);
     }
   }
- }
+
+  void _onMoverValorInicial(MoverValorInicial event, Emitter<JuegoState> emit) {
+    Casilla origen = state.tablero.obtenerCasilla(event.xOrigen, event.yOrigen);
+    Casilla destino = state.tablero.obtenerCasilla(event.xDestino, event.yDestino);
+    
+    origen.valor = null; // Borramos el número de la casilla anterior
+    destino.valor = event.valor; // Lo colocamos en la nueva casilla
+    
+    _actualizarEstadoInicial(emit);
+  }
 
   void _onHacerJugada(HacerJugada event, Emitter<JuegoState> emit) {
-    // EL BLOQUEO PRINCIPAL: Si no estamos en JuegoActivo, la jugada se rechaza automáticamente.
-    if (state is! JuegoActivo) return;
+    // Aquí irá la lógica de las jugadas normales una vez que se presione "INICIAR"
+  }
 
-    bool esValido = state.tablero.intentarColocarNumero(event.x, event.y, event.valor);
-
-    if (esValido) {
-      // Emitimos un nuevo estado activo para que la interfaz se redibuje
+  // Función interna para recalcular cuántos números llevamos y cambiar de estado
+  void _actualizarEstadoInicial(Emitter<JuegoState> emit) {
+    int colocados = state.tablero.contarNumerosIniciales();
+    
+    if (colocados >= 6) { 
+      // Si ya están los 6, desbloqueamos el tablero
       emit(JuegoActivo(state.tablero));
     } else {
-      // Emitimos un error temporal si rompe una regla de la región
-      emit(JugadaInvalida(state.tablero, 'Movimiento no permitido en esta zona'));
+      // Si faltan, actualizamos la UI con el nuevo contador
+      emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: colocados));
     }
   }
 }
