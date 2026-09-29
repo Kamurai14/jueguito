@@ -47,36 +47,44 @@ class PantallaTablero extends StatelessWidget {
 
                         Casilla casilla = state.tablero.obtenerCasilla(x, y);
 
-                        return GestureDetector(
-                          onTap: () {
-                            if (casilla.esInicial) {
-                              // Llamamos a la función que importamos del nuevo archivo
-                              mostrarSelectorNumero(context, x, y, state);
-                            }
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300], 
-                              border: Border.all(color: Colors.black12),
-                            ),
-                            child: Stack(
-                              children: [
-                                if (casilla.valor != null)
-                                  Center(
-                                    child: Text(
-                                      casilla.valor.toString(),
-                                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                if (casilla.esInicial)
-                                  const Positioned(
-                                    bottom: 2,
-                                    right: 2,
-                                    child: Icon(Icons.star, size: 16, color: Colors.amber),
-                                  ),
-                              ],
-                            ),
-                          ),
+                        // Agregamos un Builder para poder leer la posición en pantalla
+                        return Builder(
+                          builder: (celdaContext) {
+                            return GestureDetector(
+                              onTap: () {
+                                if (casilla.esInicial) {
+                                  // Calculamos el centro exacto de la casilla en coordenadas de pantalla
+                                  final box = celdaContext.findRenderObject() as RenderBox;
+                                  final centroGlobal = box.localToGlobal(box.size.center(Offset.zero));
+                                  
+                                  mostrarSelectorAbanico(context, x, y, state, centroGlobal);
+                                }
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300], 
+                                  border: Border.all(color: Colors.black12),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    if (casilla.valor != null)
+                                      Center(
+                                        child: Text(
+                                          casilla.valor.toString(),
+                                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    if (casilla.esInicial)
+                                      const Positioned(
+                                        bottom: 2,
+                                        right: 2,
+                                        child: Icon(Icons.star, size: 16, color: Colors.amber),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
                         );
                       },
                     ),
