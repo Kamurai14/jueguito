@@ -34,9 +34,12 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     Casilla origen = state.tablero.obtenerCasilla(event.xOrigen, event.yOrigen);
     Casilla destino = state.tablero.obtenerCasilla(event.xDestino, event.yDestino);
     
-    origen.valor = null; // Borramos el número de la casilla anterior
-    destino.valor = event.valor; // Lo colocamos en la nueva casilla
+    // Guardamos el valor que está en la casilla destino (puede ser un número o null)
+    int? valorEnDestino = destino.valor; 
     
+    // Hacemos el intercambio mágico
+    destino.valor = event.valor; // Ponemos el nuevo número en el destino
+    origen.valor = valorEnDestino; // Pasamos el valor viejo a donde estaba el otro
     _actualizarEstadoInicial(emit);
   }
 
