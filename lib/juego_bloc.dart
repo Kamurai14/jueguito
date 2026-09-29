@@ -9,6 +9,16 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     on<InsertarValorInicial>(_onInsertarValorInicial);
     on<MoverValorInicial>(_onMoverValorInicial);
     on<HacerJugada>(_onHacerJugada); 
+    on<QuitarValorInicial>(_onQuitarValorInicial);
+  }
+
+  void _onQuitarValorInicial(QuitarValorInicial event, Emitter<JuegoState> emit) {
+    Casilla target = state.tablero.obtenerCasilla(event.x, event.y);
+    
+    if (target.esInicial) {
+      target.valor = null; // Vaciamos la casilla
+      _actualizarEstadoInicial(emit); // Recalculamos si el botón verde debe apagarse
+    }
   }
 
   void _onInsertarValorInicial(InsertarValorInicial event, Emitter<JuegoState> emit) {

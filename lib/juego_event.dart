@@ -27,3 +27,10 @@ class MoverValorInicial extends JuegoEvent {
 
   MoverValorInicial(this.xOrigen, this.yOrigen, this.xDestino, this.yDestino, this.valor);
 }
+
+class QuitarValorInicial extends JuegoEvent {
+  final int x;
+  final int y;
+
+  QuitarValorInicial(this.x, this.y);
+}

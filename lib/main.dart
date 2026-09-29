@@ -152,6 +152,8 @@ class PantallaTablero extends StatelessWidget {
 
   // Método actualizado que recibe el state para buscar si el número ya existe
   void _mostrarSelectorNumero(BuildContext context, int x, int y, JuegoState state) {
+    Casilla casillaActual = state.tablero.obtenerCasilla(x, y);
+    bool tieneNumero = casillaActual.valor != null;
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -159,6 +161,7 @@ class PantallaTablero extends StatelessWidget {
           title: const Text('Elige un número'),
           content: Wrap(
             spacing: 10,
+            runSpacing: 10,
             children: List.generate(6, (index) {
               int numero = index + 1;
               return ElevatedButton(
@@ -183,6 +186,22 @@ class PantallaTablero extends StatelessWidget {
               );
             }),
           ),
+          actions: [
+            if (tieneNumero)
+              TextButton(
+                onPressed: () {
+                  // Enviamos el evento para borrar el número
+                  context.read<JuegoBloc>().add(QuitarValorInicial(x, y));
+                  Navigator.of(dialogContext).pop();
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Borrar número'),
+              ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
+          ],
         );
       },
     );
