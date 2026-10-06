@@ -8,6 +8,16 @@ import 'package:jueguito/ui/dialogo_selector.dart';
 class PantallaTablero extends StatelessWidget {
   const PantallaTablero({super.key});
 
+  Color _obtenerColorZona(String idZona) {
+    if (idZona.startsWith('AM')) return Colors.amber[400]!;
+    if (idZona.startsWith('AZ')) return Colors.blue[400]!;
+    if (idZona.startsWith('VE')) return Colors.green[400]!;
+    if (idZona.startsWith('MO')) return Colors.purple[400]!;
+    if (idZona.startsWith('RO')) return Colors.red[400]!;
+    
+    return Colors.grey[400]!; 
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,6 +60,12 @@ class PantallaTablero extends StatelessWidget {
                         // Agregamos un Builder para poder leer la posición en pantalla
                         return Builder(
                           builder: (celdaContext) {
+                            
+                            // 1. Detectamos si seguimos en la fase de elegir números
+                            bool esFaseInicial = state is JuegoEsperandoIniciales;
+                            // 2. Evaluamos si esta casilla específica debe brillar
+                            bool mostrarBrillo = casilla.esInicial && esFaseInicial;
+
                             return GestureDetector(
                               onTap: () {
                                 if (casilla.esInicial) {
@@ -60,27 +76,37 @@ class PantallaTablero extends StatelessWidget {
                                   mostrarSelectorAbanico(context, x, y, state, centroGlobal);
                                 }
                               },
-                              child: Container(
+                              
+                              // AQUÍ INICIA EL CAMBIO: Reemplazamos Container por AnimatedContainer
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[300], 
-                                  border: Border.all(color: Colors.black12),
+                                  color: _obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id), 
+
+                                  // Borde dinámico: grueso y brillante si está activo, delgado si no
+                                  border: Border.all(
+                                    color: mostrarBrillo ? Colors.yellowAccent : Colors.black26, 
+                                    width: mostrarBrillo ? 3.0 : 1.0
+                                  ),
+                                  
+                                  // Sombra resplandeciente
+                                  boxShadow: mostrarBrillo ? [
+                                    BoxShadow(
+                                      color: Colors.yellowAccent.withOpacity(0.8),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                    )
+                                  ] : [],
                                 ),
-                                child: Stack(
-                                  children: [
-                                    if (casilla.valor != null)
-                                      Center(
-                                        child: Text(
+                                
+                                // Eliminamos el Stack y la estrellita, dejando solo el Center con el número
+                                child: Center(
+                                  child: casilla.valor != null
+                                      ? Text(
                                           casilla.valor.toString(),
                                           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    if (casilla.esInicial)
-                                      const Positioned(
-                                        bottom: 2,
-                                        right: 2,
-                                        child: Icon(Icons.star, size: 16, color: Colors.amber),
-                                      ),
-                                  ],
+                                        )
+                                      : null,
                                 ),
                               ),
                             );

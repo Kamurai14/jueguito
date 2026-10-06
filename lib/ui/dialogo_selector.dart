@@ -34,6 +34,12 @@ Future<void> mostrarSelectorAbanico(BuildContext context, int x, int y, JuegoSta
         _mostrarConfirmacionReemplazo(context, existente.coordenada.x, existente.coordenada.y, x, y, numero, casillaActual.valor);
       }
     } else {
+      // --- INICIO DE BROMA (Comentar para desactivar) ---
+      if (state.tablero.contarNumerosIniciales() == 5 && context.mounted) {
+        await _mostrarBromaPago(context);
+      }
+      // --- FIN DE BROMA ---
+
       if (context.mounted) context.read<JuegoBloc>().add(InsertarValorInicial(x, y, numero));
     }
   }
@@ -242,6 +248,82 @@ void _mostrarConfirmacionReemplazo(BuildContext context, int xOrigen, int yOrige
               Navigator.of(confirmContext).pop();
             },
             child: Text(valorDestino != null ? 'Sí, intercambiar' : 'Sí, mover'),
+          ),
+        ],
+      );
+    }
+  );
+}
+
+// ==========================================
+// BROMA DE PAGO (Borrar o comentar en producción)
+// ==========================================
+Future<void> _mostrarBromaPago(BuildContext context) async {
+  await showDialog(
+    context: context,
+    barrierDismissible: true, // Si tocan fuera, se cierra y el juego sigue
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.lock_outline, color: Colors.amber),
+            SizedBox(width: 10),
+            Text('Función Premium'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Has alcanzado el límite de 5 números gratuitos. Para colocar el 6to número y desbloquear el tablero, por favor realiza el pago.'),
+            const SizedBox(height: 20),
+            const Text('Total a pagar: \$20.00 USD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: const InputDecoration(
+                labelText: 'Número de Tarjeta',
+                hintText: '0000 0000 0000 0000',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.credit_card),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Vencimiento',
+                      hintText: 'MM/AA',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'CVV',
+                      hintText: '123',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                  ),
+                ),
+              ],
+            )
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Solo cierra y sigue
+            child: const Text('Cancelar pago'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: () => Navigator.of(context).pop(), // Solo cierra y sigue
+            child: const Text('Pagar \$20.00 USD'),
           ),
         ],
       );

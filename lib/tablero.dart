@@ -6,6 +6,7 @@ class Tablero {
   static const int tamano = 7;
   late List<List<Casilla>> _cuadricula;
   final CapaZonas capa; 
+  
 
   Tablero(this.capa) {
     _construirTableroEnBlanco();
