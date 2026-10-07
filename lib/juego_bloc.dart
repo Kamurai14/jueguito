@@ -4,6 +4,7 @@ import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/tablero.dart';
 import 'dart:math';
+import 'package:jueguito/motor_reglas.dart';
 
 class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   JuegoBloc(Tablero tablero) : super(JuegoEsperandoIniciales(tablero, numerosColocados: 0)) {
@@ -65,16 +66,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
   }
 
-  // --- SISTEMA DE PUNTUACIONES ---
-  int _obtenerPuntosPrimeraVez(String idZona) {
-    if (idZona.startsWith('AM')) return 8; // Amarilla
-    if (idZona.startsWith('AZ')) return 7; // Azul
-    if (idZona.startsWith('RO')) return 6; // Roja
-    if (idZona.startsWith('MO')) return 6; // Morada
-    if (idZona.startsWith('VE')) return 4; // Verde
-    return 0;
-  }
-
   // --- HELPER AUTOMATIZADO ---
   JuegoEnProgreso _generarNuevoTurno(
     Tablero tablero, 
@@ -127,7 +118,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
 
         // Si esta zona no la habíamos cobrado y ahora resulta que está llena...
         if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
-          int puntos = _obtenerPuntosPrimeraVez(idZona);
+          int puntos = MotorReglas.obtenerPuntosPrimeraVez(idZona);
           nuevaPuntuacion += puntos;
           nuevasZonas.add(idZona); // La marcamos para no cobrarla de nuevo
           alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
