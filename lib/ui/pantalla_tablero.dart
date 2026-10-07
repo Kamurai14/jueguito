@@ -78,28 +78,31 @@ class PantallaTablero extends StatelessWidget {
 
                             return GestureDetector(
                               onTap: () {
-                                if (estaEnProgreso) {
+                                // 1. Cambiamos la validación directa usando "is"
+                                if (state is JuegoEnProgreso) {
+                                  
                                   // --- LÓGICA DURANTE LA PARTIDA ---
                                   if (!casilla.esInicial && casilla.estaVacia) {
-                                    JuegoEnProgreso estadoActual = state as JuegoEnProgreso;
                                     
-                                    if (estadoActual.anclaSeleccionada == null) {
+                                    // 2. Borramos la variable "estadoActual" y usamos "state" directamente
+                                    if (state.anclaSeleccionada == null) {
                                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un ancla primero.')));
                                       return;
                                     }
                                     
-                                    if (!state.tablero.esAdyacenteAValor(x, y, estadoActual.anclaSeleccionada!)) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Debes colocarlo pegado (arriba, abajo, izq o der) a un ${estadoActual.anclaSeleccionada}')));
+                                    if (!state.tablero.esAdyacenteAValor(x, y, state.anclaSeleccionada!)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Debes colocarlo pegado (arriba, abajo, izq o der) a un ${state.anclaSeleccionada}')));
                                       return;
                                     }
 
-                                    if (!state.tablero.esColocacionValida(x, y, estadoActual.numeroAColocar!)) {
+                                    if (!state.tablero.esColocacionValida(x, y, state.numeroAColocar!)) {
                                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jugada inválida: Rompe las reglas de esta zona.')));
                                       return;
                                     }
 
                                     // Si pasó todas las validaciones, ¡disparamos la jugada!
-                                    context.read<JuegoBloc>().add(ColocarJugada(x, y, estadoActual.numeroAColocar!));
+                                    context.read<JuegoBloc>().add(ColocarJugada(x, y, state.numeroAColocar!));
+                                    
                                   } else if (casilla.esInicial || !casilla.estaVacia) {
                                     // Intentas tocar una casilla bloqueada o ya ocupada
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -154,7 +157,8 @@ class PantallaTablero extends StatelessWidget {
                 ),
                 
                 // PANEL DE CONTROL INFERIOR
-                if (estaEnProgreso)
+                // Al usar "is" directamente aquí, Dart promueve "state" mágicamente
+                if (state is JuegoEnProgreso) 
                   Container(
                     height: 120, // Altura fija para evitar saltos
                     alignment: Alignment.center,
@@ -167,15 +171,16 @@ class PantallaTablero extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _DadoBoton(
-                              valor: (state as JuegoEnProgreso).dado1,
-                              esAncla: (state as JuegoEnProgreso).anclaSeleccionada == (state as JuegoEnProgreso).dado1,
-                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla((state as JuegoEnProgreso).dado1, (state as JuegoEnProgreso).dado2)),
+                              // ¡Mira qué limpio queda sin los casteos!
+                              valor: state.dado1, 
+                              esAncla: state.anclaSeleccionada == state.dado1,
+                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(state.dado1, state.dado2)),
                             ),
                             const SizedBox(width: 20),
                             _DadoBoton(
-                              valor: (state as JuegoEnProgreso).dado2,
-                              esAncla: (state as JuegoEnProgreso).anclaSeleccionada == (state as JuegoEnProgreso).dado2,
-                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla((state as JuegoEnProgreso).dado2, (state as JuegoEnProgreso).dado1)),
+                              valor: state.dado2,
+                              esAncla: state.anclaSeleccionada == state.dado2,
+                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(state.dado2, state.dado1)),
                             ),
                             const SizedBox(width: 30),
                             TextButton(
