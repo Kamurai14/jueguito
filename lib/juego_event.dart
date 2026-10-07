@@ -36,3 +36,18 @@ class QuitarValorInicial extends JuegoEvent {
 }
 
 class ComenzarPartida extends JuegoEvent {}
+
+class SeleccionarAncla extends JuegoEvent {
+  final int ancla;
+  final int numeroAColocar;
+  SeleccionarAncla(this.ancla, this.numeroAColocar);
+}
+
+class ColocarJugada extends JuegoEvent {
+  final int x;
+  final int y;
+  final int numero;
+  ColocarJugada(this.x, this.y, this.numero);
+}
+
+class PasarTurno extends JuegoEvent {}

@@ -3,6 +3,7 @@ import 'package:jueguito/casilla.dart';
 import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/tablero.dart';
+import 'dart:math';
 
 class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   JuegoBloc(Tablero tablero) : super(JuegoEsperandoIniciales(tablero, numerosColocados: 0)) {
@@ -11,6 +12,9 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     on<HacerJugada>(_onHacerJugada); 
     on<QuitarValorInicial>(_onQuitarValorInicial);
     on<ComenzarPartida>(_onComenzarPartida);
+    on<SeleccionarAncla>(_onSeleccionarAncla);
+    on<ColocarJugada>(_onColocarJugada);
+    on<PasarTurno>(_onPasarTurno);
   }
 
   void _onQuitarValorInicial(QuitarValorInicial event, Emitter<JuegoState> emit) {
@@ -61,8 +65,47 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
   }
 
+  JuegoEnProgreso _generarNuevoTurno(Tablero tablero) {
+    final rand = Random();
+    return JuegoEnProgreso(
+      tablero,
+      dado1: rand.nextInt(6) + 1,
+      dado2: rand.nextInt(6) + 1,
+    );
+  }
+
   void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
-    // Simplemente emitimos el nuevo estado pasando el tablero tal como quedó
-    emit(JuegoEnProgreso(state.tablero));
+    // Genera los dados inmediatamente al presionar INICIAR
+    emit(_generarNuevoTurno(state.tablero));
+  }
+
+  void _onSeleccionarAncla(SeleccionarAncla event, Emitter<JuegoState> emit) {
+    if (state is JuegoEnProgreso) {
+      final actual = state as JuegoEnProgreso;
+      emit(JuegoEnProgreso(
+        actual.tablero,
+        dado1: actual.dado1,
+        dado2: actual.dado2,
+        anclaSeleccionada: event.ancla,
+        numeroAColocar: event.numeroAColocar,
+      ));
+    }
+  }
+
+  void _onColocarJugada(ColocarJugada event, Emitter<JuegoState> emit) {
+    if (state is JuegoEnProgreso) {
+      bool colocado = state.tablero.intentarColocarNumero(event.x, event.y, event.numero);
+      if (colocado) {
+        // Al colocar con éxito, se tiran nuevos dados automáticamente
+        emit(_generarNuevoTurno(state.tablero));
+      }
+    }
+  }
+
+  void _onPasarTurno(PasarTurno event, Emitter<JuegoState> emit) {
+    if (state is JuegoEnProgreso) {
+      // Al rendirse en un turno, se tiran nuevos dados automáticamente
+      emit(_generarNuevoTurno(state.tablero));
+    }
   }
 }

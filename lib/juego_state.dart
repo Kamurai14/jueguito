@@ -29,5 +29,16 @@ class JugadaInvalida extends JuegoActivo {
 }
 
 class JuegoEnProgreso extends JuegoState {
-  JuegoEnProgreso(super.tablero);
+  final int dado1;
+  final int dado2;
+  final int? anclaSeleccionada;
+  final int? numeroAColocar;
+
+  JuegoEnProgreso(
+    super.tablero, {
+    required this.dado1,
+    required this.dado2,
+    this.anclaSeleccionada,
+    this.numeroAColocar,
+  });
 }

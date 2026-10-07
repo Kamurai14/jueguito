@@ -139,6 +139,29 @@ class Tablero {
     return contador;
   }
 
+  // 1. Revisa si en cruz (arriba, abajo, izq, der) existe el número que elegimos como ancla
+  bool esAdyacenteAValor(int x, int y, int valorBuscado) {
+    final adyacentes = [
+      Coordenada(x + 1, y), Coordenada(x - 1, y),
+      Coordenada(x, y + 1), Coordenada(x, y - 1)
+    ];
+    
+    for (var c in adyacentes) {
+      if (c.x >= 0 && c.x < tamano && c.y >= 0 && c.y < tamano) {
+        if (obtenerCasilla(c.x, c.y).valor == valorBuscado) return true;
+      }
+    }
+    return false;
+  }
+
+  // 2. Simulador: Solo nos dice si la jugada es válida según tu CapaZonas, sin modificar el tablero
+  bool esColocacionValida(int x, int y, int numero) {
+    Casilla casillaTarget = obtenerCasilla(x, y);
+    ZonaJuego zonaTarget = capa.obtenerZonaEn(casillaTarget.coordenada);
+    List<int> actuales = obtenerNumerosEnZona(zonaTarget.id, excluir: casillaTarget.coordenada);
+    return zonaTarget.tipo.esPosibleAgregar(actuales, numero);
+  }
+
 }
 
 

@@ -80,15 +80,30 @@ class PantallaTablero extends StatelessWidget {
                               onTap: () {
                                 if (estaEnProgreso) {
                                   // --- LÓGICA DURANTE LA PARTIDA ---
-                                  if (!casilla.esInicial) {
-                                    // Tocaste una casilla normal (vacía)
+                                  if (!casilla.esInicial && casilla.estaVacia) {
+                                    JuegoEnProgreso estadoActual = state as JuegoEnProgreso;
+                                    
+                                    if (estadoActual.anclaSeleccionada == null) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un ancla primero.')));
+                                      return;
+                                    }
+                                    
+                                    if (!state.tablero.esAdyacenteAValor(x, y, estadoActual.anclaSeleccionada!)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Debes colocarlo pegado (arriba, abajo, izq o der) a un ${estadoActual.anclaSeleccionada}')));
+                                      return;
+                                    }
+
+                                    if (!state.tablero.esColocacionValida(x, y, estadoActual.numeroAColocar!)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jugada inválida: Rompe las reglas de esta zona.')));
+                                      return;
+                                    }
+
+                                    // Si pasó todas las validaciones, ¡disparamos la jugada!
+                                    context.read<JuegoBloc>().add(ColocarJugada(x, y, estadoActual.numeroAColocar!));
+                                  } else if (casilla.esInicial || !casilla.estaVacia) {
+                                    // Intentas tocar una casilla bloqueada o ya ocupada
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Próximamente: Selector para jugar')),
-                                    );
-                                  } else {
-                                    // Intentas tocar una casilla bloqueada
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Las casillas iniciales están bloqueadas.')),
+                                      const SnackBar(content: Text('Casilla no disponible.')),
                                     );
                                   }
                                 } else {
@@ -123,7 +138,7 @@ class PantallaTablero extends StatelessWidget {
                                           style: TextStyle(
                                             fontSize: 24, 
                                             fontWeight: FontWeight.bold,
-                                            // Oscurecemos ligeramente el texto de los números iniciales para diferenciarlos
+                                            // Oscurecemos el texto de los números iniciales para diferenciarlos
                                             color: casilla.esInicial ? Colors.black87 : Colors.blue[900],
                                           ),
                                         )
@@ -138,39 +153,102 @@ class PantallaTablero extends StatelessWidget {
                   ),
                 ),
                 
-                // Ocultamos el botón por completo si la partida ya está en progreso
-                // Usamos Visibility para ocultar el botón pero conservar su espacio exacto
-                Visibility(
-                  visible: !estaEnProgreso,
-                  maintainSize: true, 
-                  maintainAnimation: true,
-                  maintainState: true,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
-                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                      ),
-                      onPressed: estaListoParaIniciar 
-                        ? () {
-                            context.read<JuegoBloc>().add(ComenzarPartida());
-                          } 
-                        : null,
-                      child: Text(
-                        'INICIAR',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: estaListoParaIniciar ? Colors.white : Colors.black38,
+                // PANEL DE CONTROL INFERIOR
+                if (estaEnProgreso)
+                  Container(
+                    height: 120, // Altura fija para evitar saltos
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Selecciona el Ancla:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _DadoBoton(
+                              valor: (state as JuegoEnProgreso).dado1,
+                              esAncla: (state as JuegoEnProgreso).anclaSeleccionada == (state as JuegoEnProgreso).dado1,
+                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla((state as JuegoEnProgreso).dado1, (state as JuegoEnProgreso).dado2)),
+                            ),
+                            const SizedBox(width: 20),
+                            _DadoBoton(
+                              valor: (state as JuegoEnProgreso).dado2,
+                              esAncla: (state as JuegoEnProgreso).anclaSeleccionada == (state as JuegoEnProgreso).dado2,
+                              onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla((state as JuegoEnProgreso).dado2, (state as JuegoEnProgreso).dado1)),
+                            ),
+                            const SizedBox(width: 30),
+                            TextButton(
+                              onPressed: () => context.read<JuegoBloc>().add(PasarTurno()),
+                              child: const Text('Pasar Turno', style: TextStyle(color: Colors.red)),
+                            )
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Visibility(
+                    visible: !estaEnProgreso,
+                    maintainSize: true, 
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24.0),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
+                          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                        ),
+                        onPressed: estaListoParaIniciar 
+                          ? () {
+                              context.read<JuegoBloc>().add(ComenzarPartida());
+                            } 
+                          : null,
+                        child: Text(
+                          'INICIAR',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: estaListoParaIniciar ? Colors.white : Colors.black38,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+// Widget extra para los botones de los dados
+class _DadoBoton extends StatelessWidget {
+  final int valor;
+  final bool esAncla;
+  final VoidCallback onTap;
+
+  const _DadoBoton({required this.valor, required this.esAncla, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: esAncla ? Colors.blue : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: esAncla ? Colors.blue[900]! : Colors.black45, width: 2),
+          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]
+        ),
+        child: Center(
+          child: Text(valor.toString(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: esAncla ? Colors.white : Colors.black87)),
         ),
       ),
     );
