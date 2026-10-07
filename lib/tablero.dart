@@ -162,6 +162,21 @@ class Tablero {
     return zonaTarget.tipo.esPosibleAgregar(actuales, numero);
   }
 
+  // Revisa si todas las casillas de una zona específica ya tienen número
+  bool estaZonaLlena(String idZona) {
+    for (int fila = 0; fila < tamano; fila++) {
+      for (int col = 0; col < tamano; col++) {
+        Casilla casilla = _cuadricula[fila][col];
+        ZonaJuego zona = capa.obtenerZonaEn(casilla.coordenada);
+        // Si pertenece a la zona y está vacía, entonces no está llena
+        if (zona.id == idZona && casilla.estaVacia) {
+          return false; 
+        }
+      }
+    }
+    return true; // No encontramos ninguna vacía, ¡está llena!
+  }
+
 }
 
 

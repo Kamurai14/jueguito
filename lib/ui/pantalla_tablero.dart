@@ -13,7 +13,6 @@ class PantallaTablero extends StatefulWidget {
   State<PantallaTablero> createState() => _PantallaTableroState();
 }
 
-// Agregamos SingleTickerProviderStateMixin para poder usar animaciones en bucle
 class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProviderStateMixin {
   
   late AnimationController _animController;
@@ -21,7 +20,6 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    // Controlador de 1 segundo que se repite de ida y vuelta (efecto pulso/respiración)
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
@@ -49,14 +47,26 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     return Scaffold(
       appBar: AppBar(title: const Text('Juego 7x7')),
       body: Center(
-        child: BlocBuilder<JuegoBloc, JuegoState>(
+        child: BlocConsumer<JuegoBloc, JuegoState>(
+          listener: (context, state) {
+            if (state is JuegoEnProgreso && state.mensajeAlerta != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.mensajeAlerta!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.amber[800],
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                )
+              );
+            }
+          },
           builder: (context, state) {
             
             bool estaListoParaIniciar = state is JuegoActivo;
 
             String textoCabecera;
             if (state is JuegoEnProgreso) {
-              textoCabecera = '¡Partida en curso! Completa el mapa.';
+              textoCabecera = 'Partida en curso';
             } else if (estaListoParaIniciar) {
               textoCabecera = '¡Tablero Desbloqueado! Presiona Iniciar.';
             } else {
@@ -67,11 +77,21 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    textoCabecera,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(textoCabecera, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      if (state is JuegoEnProgreso)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(color: Colors.blue[900], borderRadius: BorderRadius.circular(20)),
+                          child: Text(
+                            'Puntos: ${state.puntuacion}', 
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 
@@ -96,13 +116,14 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                           builder: (celdaContext) {
                             
                             bool mostrarBrilloInicial = casilla.esInicial && state is! JuegoEnProgreso;
-                            
-                            // 1. EVALUAMOS SI ESTA CASILLA ES UNA JUGADA VÁLIDA PARA EL ANCLA ACTUAL
                             bool esSugerencia = false;
-                            if (state is JuegoEnProgreso && state.anclaSeleccionada != null && !casilla.esInicial && casilla.estaVacia) {
-                              bool esAdyacente = state.tablero.esAdyacenteAValor(x, y, state.anclaSeleccionada!);
-                              bool esValida = state.tablero.esColocacionValida(x, y, state.numeroAColocar!);
-                              esSugerencia = esAdyacente && esValida;
+
+                            if (state is JuegoEnProgreso) {
+                              if (state.anclaSeleccionada != null && !casilla.esInicial && casilla.estaVacia) {
+                                bool esAdyacente = state.tablero.esAdyacenteAValor(x, y, state.anclaSeleccionada!);
+                                bool esValida = state.tablero.esColocacionValida(x, y, state.numeroAColocar!);
+                                esSugerencia = esAdyacente && esValida;
+                              }
                             }
 
                             return GestureDetector(
@@ -121,7 +142,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                                     }
 
                                     if (!state.tablero.esColocacionValida(x, y, state.numeroAColocar!)) {
-                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jugada inválida: Rompe las reglas de esta zona.')));
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Jugada inválida: Rompe las reglas.')));
                                       return;
                                     }
 
@@ -139,7 +160,6 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                                 }
                               },
                               
-                              // 2. ENVOLVEMOS EN ANIMATEDBUILDER PARA SINCRONIZAR CON EL PULSO
                               child: AnimatedBuilder(
                                 animation: _animController,
                                 builder: (context, child) {
@@ -153,7 +173,6 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                                     anchoBorde = 3.0;
                                     sombras = [BoxShadow(color: Colors.yellowAccent.withOpacity(0.8), blurRadius: 10, spreadRadius: 2)];
                                   } else if (esSugerencia) {
-                                    // EFECTO DE PULSO VERDE MIENTRAS ESTÉ ACTIVA LA SUGERENCIA
                                     colorBorde = Color.lerp(Colors.greenAccent, Colors.green[900], _animController.value)!;
                                     anchoBorde = 3.0;
                                     sombras = [
@@ -283,7 +302,14 @@ class _DadoBoton extends StatelessWidget {
           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]
         ),
         child: Center(
-          child: Text(valor.toString(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: esAncla ? Colors.white : Colors.black87)),
+          child: Text(
+            valor.toString(), 
+            style: TextStyle(
+              fontSize: 24, 
+              fontWeight: FontWeight.bold, 
+              color: esAncla ? Colors.white : Colors.black87
+            )
+          ),
         ),
       ),
     );

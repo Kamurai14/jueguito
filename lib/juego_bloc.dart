@@ -65,18 +65,37 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
   }
 
-  JuegoEnProgreso _generarNuevoTurno(Tablero tablero) {
+  // --- SISTEMA DE PUNTUACIONES ---
+  int _obtenerPuntosPrimeraVez(String idZona) {
+    if (idZona.startsWith('AM')) return 8; // Amarilla
+    if (idZona.startsWith('AZ')) return 7; // Azul
+    if (idZona.startsWith('RO')) return 6; // Roja
+    if (idZona.startsWith('MO')) return 6; // Morada
+    if (idZona.startsWith('VE')) return 4; // Verde
+    return 0;
+  }
+
+  // --- HELPER AUTOMATIZADO ---
+  JuegoEnProgreso _generarNuevoTurno(
+    Tablero tablero, 
+    int puntuacionActual, 
+    Set<String> zonasCompletadas,
+    {String? mensajeAlerta}
+  ) {
     final rand = Random();
     return JuegoEnProgreso(
       tablero,
       dado1: rand.nextInt(6) + 1,
       dado2: rand.nextInt(6) + 1,
+      puntuacion: puntuacionActual,
+      zonasCompletadas: zonasCompletadas,
+      mensajeAlerta: mensajeAlerta,
     );
   }
 
+  // --- EVENTOS ---
   void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
-    // Genera los dados inmediatamente al presionar INICIAR
-    emit(_generarNuevoTurno(state.tablero));
+    emit(_generarNuevoTurno(state.tablero, 0, {})); // Iniciamos con 0 puntos
   }
 
   void _onSeleccionarAncla(SeleccionarAncla event, Emitter<JuegoState> emit) {
@@ -88,24 +107,46 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         dado2: actual.dado2,
         anclaSeleccionada: event.ancla,
         numeroAColocar: event.numeroAColocar,
+        puntuacion: actual.puntuacion,
+        zonasCompletadas: actual.zonasCompletadas,
       ));
     }
   }
 
   void _onColocarJugada(ColocarJugada event, Emitter<JuegoState> emit) {
     if (state is JuegoEnProgreso) {
-      bool colocado = state.tablero.intentarColocarNumero(event.x, event.y, event.numero);
+      final actual = state as JuegoEnProgreso;
+      bool colocado = actual.tablero.intentarColocarNumero(event.x, event.y, event.numero);
+      
       if (colocado) {
-        // Al colocar con éxito, se tiran nuevos dados automáticamente
-        emit(_generarNuevoTurno(state.tablero));
+        String idZona = actual.tablero.obtenerZonaDeCasilla(event.x, event.y).id;
+        
+        int nuevaPuntuacion = actual.puntuacion;
+        Set<String> nuevasZonas = Set.from(actual.zonasCompletadas);
+        String? alertaPersonalizada;
+
+        // Si esta zona no la habíamos cobrado y ahora resulta que está llena...
+        if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
+          int puntos = _obtenerPuntosPrimeraVez(idZona);
+          nuevaPuntuacion += puntos;
+          nuevasZonas.add(idZona); // La marcamos para no cobrarla de nuevo
+          alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
+        }
+
+        emit(_generarNuevoTurno(
+          actual.tablero, 
+          nuevaPuntuacion, 
+          nuevasZonas,
+          mensajeAlerta: alertaPersonalizada
+        ));
       }
     }
   }
 
   void _onPasarTurno(PasarTurno event, Emitter<JuegoState> emit) {
     if (state is JuegoEnProgreso) {
-      // Al rendirse en un turno, se tiran nuevos dados automáticamente
-      emit(_generarNuevoTurno(state.tablero));
+      final actual = state as JuegoEnProgreso;
+      emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas));
     }
   }
 }

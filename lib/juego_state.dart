@@ -33,6 +33,11 @@ class JuegoEnProgreso extends JuegoState {
   final int dado2;
   final int? anclaSeleccionada;
   final int? numeroAColocar;
+  
+  // Novedades: Puntuación y zonas completadas
+  final int puntuacion;
+  final Set<String> zonasCompletadas;
+  final String? mensajeAlerta; // Para mostrar el SnackBar
 
   JuegoEnProgreso(
     super.tablero, {
@@ -40,5 +45,8 @@ class JuegoEnProgreso extends JuegoState {
     required this.dado2,
     this.anclaSeleccionada,
     this.numeroAColocar,
+    this.puntuacion = 0, // Inicia en 0 por defecto
+    this.zonasCompletadas = const {}, // Inicia vacío
+    this.mensajeAlerta,
   });
 }
