@@ -5,21 +5,13 @@ import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/casilla.dart';
 import 'package:jueguito/ui/dialogo_selector.dart';
+import 'package:jueguito/ui/tema_juego.dart';
 
 class CuadriculaTablero extends StatelessWidget {
   final JuegoState state;
   final AnimationController animController;
   
   const CuadriculaTablero({super.key, required this.state, required this.animController});
-
-  Color _obtenerColorZona(String idZona) {
-    if (idZona.startsWith('AM')) return Colors.amber[400]!;
-    if (idZona.startsWith('AZ')) return Colors.blue[400]!;
-    if (idZona.startsWith('VE')) return Colors.green[400]!;
-    if (idZona.startsWith('MO')) return Colors.purple[400]!;
-    if (idZona.startsWith('RO')) return Colors.red[400]!;
-    return Colors.grey[400]!; 
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,7 +100,7 @@ class CuadriculaTablero extends StatelessWidget {
 
                   return Container(
                     decoration: BoxDecoration(
-                      color: _obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id), 
+                      color: TemaJuego.obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id),
                       border: Border.all(color: colorBorde, width: anchoBorde),
                       boxShadow: sombras,
                     ),
