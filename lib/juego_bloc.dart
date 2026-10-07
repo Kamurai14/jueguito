@@ -10,6 +10,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     on<MoverValorInicial>(_onMoverValorInicial);
     on<HacerJugada>(_onHacerJugada); 
     on<QuitarValorInicial>(_onQuitarValorInicial);
+    on<ComenzarPartida>(_onComenzarPartida);
   }
 
   void _onQuitarValorInicial(QuitarValorInicial event, Emitter<JuegoState> emit) {
@@ -58,5 +59,10 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       // Si faltan, actualizamos la UI con el nuevo contador
       emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: colocados));
     }
+  }
+
+  void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
+    // Simplemente emitimos el nuevo estado pasando el tablero tal como quedó
+    emit(JuegoEnProgreso(state.tablero));
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jueguito/juego_bloc.dart';
+import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/casilla.dart';
 import 'package:jueguito/ui/dialogo_selector.dart';
@@ -21,11 +22,24 @@ class PantallaTablero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Configuración Inicial')),
+      appBar: AppBar(title: const Text('Juego 7x7')),
       body: Center(
         child: BlocBuilder<JuegoBloc, JuegoState>(
           builder: (context, state) {
+            
+            // Banderas para saber en qué etapa del juego estamos
             bool estaListoParaIniciar = state is JuegoActivo;
+            bool estaEnProgreso = state is JuegoEnProgreso;
+
+            // Mensaje dinámico de la cabecera
+            String textoCabecera;
+            if (estaEnProgreso) {
+              textoCabecera = '¡Partida en curso! Completa el mapa.';
+            } else if (estaListoParaIniciar) {
+              textoCabecera = '¡Tablero Desbloqueado! Presiona Iniciar.';
+            } else {
+              textoCabecera = 'Inserta los números (1-6). Llevas: ${(state as JuegoEsperandoIniciales).numerosColocados}/6';
+            }
 
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -33,10 +47,9 @@ class PantallaTablero extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
-                    estaListoParaIniciar
-                        ? '¡Tablero Desbloqueado! Presiona Iniciar.'
-                        : 'Inserta los números (1-6). Llevas: ${(state as JuegoEsperandoIniciales).numerosColocados}/6',
+                    textoCabecera,
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 
@@ -57,39 +70,44 @@ class PantallaTablero extends StatelessWidget {
 
                         Casilla casilla = state.tablero.obtenerCasilla(x, y);
 
-                        // Agregamos un Builder para poder leer la posición en pantalla
                         return Builder(
                           builder: (celdaContext) {
                             
-                            // 1. Detectamos si seguimos en la fase de elegir números
-                            bool esFaseInicial = state is JuegoEsperandoIniciales;
-                            // 2. Evaluamos si esta casilla específica debe brillar
-                            bool mostrarBrillo = casilla.esInicial && esFaseInicial;
+                            // El brillo solo se muestra si son iniciales y la partida AÚN NO empieza
+                            bool mostrarBrillo = casilla.esInicial && !estaEnProgreso;
 
                             return GestureDetector(
                               onTap: () {
-                                if (casilla.esInicial) {
-                                  // Calculamos el centro exacto de la casilla en coordenadas de pantalla
-                                  final box = celdaContext.findRenderObject() as RenderBox;
-                                  final centroGlobal = box.localToGlobal(box.size.center(Offset.zero));
-                                  
-                                  mostrarSelectorAbanico(context, x, y, state, centroGlobal);
+                                if (estaEnProgreso) {
+                                  // --- LÓGICA DURANTE LA PARTIDA ---
+                                  if (!casilla.esInicial) {
+                                    // Tocaste una casilla normal (vacía)
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Próximamente: Selector para jugar')),
+                                    );
+                                  } else {
+                                    // Intentas tocar una casilla bloqueada
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Las casillas iniciales están bloqueadas.')),
+                                    );
+                                  }
+                                } else {
+                                  // --- LÓGICA DE FASE DE CONFIGURACIÓN ---
+                                  if (casilla.esInicial) {
+                                    final box = celdaContext.findRenderObject() as RenderBox;
+                                    final centroGlobal = box.localToGlobal(box.size.center(Offset.zero));
+                                    mostrarSelectorAbanico(context, x, y, state, centroGlobal);
+                                  }
                                 }
                               },
-                              
-                              // AQUÍ INICIA EL CAMBIO: Reemplazamos Container por AnimatedContainer
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 decoration: BoxDecoration(
                                   color: _obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id), 
-
-                                  // Borde dinámico: grueso y brillante si está activo, delgado si no
                                   border: Border.all(
                                     color: mostrarBrillo ? Colors.yellowAccent : Colors.black26, 
                                     width: mostrarBrillo ? 3.0 : 1.0
                                   ),
-                                  
-                                  // Sombra resplandeciente
                                   boxShadow: mostrarBrillo ? [
                                     BoxShadow(
                                       color: Colors.yellowAccent.withOpacity(0.8),
@@ -98,13 +116,16 @@ class PantallaTablero extends StatelessWidget {
                                     )
                                   ] : [],
                                 ),
-                                
-                                // Eliminamos el Stack y la estrellita, dejando solo el Center con el número
                                 child: Center(
                                   child: casilla.valor != null
                                       ? Text(
                                           casilla.valor.toString(),
-                                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                          style: TextStyle(
+                                            fontSize: 24, 
+                                            fontWeight: FontWeight.bold,
+                                            // Oscurecemos ligeramente el texto de los números iniciales para diferenciarlos
+                                            color: casilla.esInicial ? Colors.black87 : Colors.blue[900],
+                                          ),
                                         )
                                       : null,
                                 ),
@@ -117,26 +138,32 @@ class PantallaTablero extends StatelessWidget {
                   ),
                 ),
                 
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24.0),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
-                    ),
-                    onPressed: estaListoParaIniciar 
-                      ? () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('¡Comienza la partida!')),
-                          );
-                        } 
-                      : null,
-                    child: Text(
-                      'INICIAR',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: estaListoParaIniciar ? Colors.white : Colors.black38,
+                // Ocultamos el botón por completo si la partida ya está en progreso
+                // Usamos Visibility para ocultar el botón pero conservar su espacio exacto
+                Visibility(
+                  visible: !estaEnProgreso,
+                  maintainSize: true, 
+                  maintainAnimation: true,
+                  maintainState: true,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      ),
+                      onPressed: estaListoParaIniciar 
+                        ? () {
+                            context.read<JuegoBloc>().add(ComenzarPartida());
+                          } 
+                        : null,
+                      child: Text(
+                        'INICIAR',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: estaListoParaIniciar ? Colors.white : Colors.black38,
+                        ),
                       ),
                     ),
                   ),

@@ -34,3 +34,5 @@ class QuitarValorInicial extends JuegoEvent {
 
   QuitarValorInicial(this.x, this.y);
 }
+
+class ComenzarPartida extends JuegoEvent {}

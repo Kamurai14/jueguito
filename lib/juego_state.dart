@@ -27,3 +27,7 @@ class JugadaInvalida extends JuegoActivo {
   final String mensaje;
   JugadaInvalida(super.tablero, this.mensaje);
 }
+
+class JuegoEnProgreso extends JuegoState {
+  JuegoEnProgreso(super.tablero);
+}
