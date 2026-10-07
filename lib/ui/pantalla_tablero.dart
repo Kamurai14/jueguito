@@ -6,8 +6,33 @@ import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/casilla.dart';
 import 'package:jueguito/ui/dialogo_selector.dart';
 
-class PantallaTablero extends StatelessWidget {
+class PantallaTablero extends StatefulWidget {
   const PantallaTablero({super.key});
+
+  @override
+  State<PantallaTablero> createState() => _PantallaTableroState();
+}
+
+// Agregamos SingleTickerProviderStateMixin para poder usar animaciones en bucle
+class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProviderStateMixin {
+  
+  late AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Controlador de 1 segundo que se repite de ida y vuelta (efecto pulso/respiración)
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
 
   Color _obtenerColorZona(String idZona) {
     if (idZona.startsWith('AM')) return Colors.amber[400]!;
@@ -27,13 +52,10 @@ class PantallaTablero extends StatelessWidget {
         child: BlocBuilder<JuegoBloc, JuegoState>(
           builder: (context, state) {
             
-            // Banderas para saber en qué etapa del juego estamos
             bool estaListoParaIniciar = state is JuegoActivo;
-            bool estaEnProgreso = state is JuegoEnProgreso;
 
-            // Mensaje dinámico de la cabecera
             String textoCabecera;
-            if (estaEnProgreso) {
+            if (state is JuegoEnProgreso) {
               textoCabecera = '¡Partida en curso! Completa el mapa.';
             } else if (estaListoParaIniciar) {
               textoCabecera = '¡Tablero Desbloqueado! Presiona Iniciar.';
@@ -73,25 +95,28 @@ class PantallaTablero extends StatelessWidget {
                         return Builder(
                           builder: (celdaContext) {
                             
-                            // El brillo solo se muestra si son iniciales y la partida AÚN NO empieza
-                            bool mostrarBrillo = casilla.esInicial && !estaEnProgreso;
+                            bool mostrarBrilloInicial = casilla.esInicial && state is! JuegoEnProgreso;
+                            
+                            // 1. EVALUAMOS SI ESTA CASILLA ES UNA JUGADA VÁLIDA PARA EL ANCLA ACTUAL
+                            bool esSugerencia = false;
+                            if (state is JuegoEnProgreso && state.anclaSeleccionada != null && !casilla.esInicial && casilla.estaVacia) {
+                              bool esAdyacente = state.tablero.esAdyacenteAValor(x, y, state.anclaSeleccionada!);
+                              bool esValida = state.tablero.esColocacionValida(x, y, state.numeroAColocar!);
+                              esSugerencia = esAdyacente && esValida;
+                            }
 
                             return GestureDetector(
                               onTap: () {
-                                // 1. Cambiamos la validación directa usando "is"
                                 if (state is JuegoEnProgreso) {
-                                  
-                                  // --- LÓGICA DURANTE LA PARTIDA ---
                                   if (!casilla.esInicial && casilla.estaVacia) {
                                     
-                                    // 2. Borramos la variable "estadoActual" y usamos "state" directamente
                                     if (state.anclaSeleccionada == null) {
                                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selecciona un ancla primero.')));
                                       return;
                                     }
                                     
                                     if (!state.tablero.esAdyacenteAValor(x, y, state.anclaSeleccionada!)) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Debes colocarlo pegado (arriba, abajo, izq o der) a un ${state.anclaSeleccionada}')));
+                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Debes colocarlo pegado a un ${state.anclaSeleccionada}')));
                                       return;
                                     }
 
@@ -100,17 +125,12 @@ class PantallaTablero extends StatelessWidget {
                                       return;
                                     }
 
-                                    // Si pasó todas las validaciones, ¡disparamos la jugada!
                                     context.read<JuegoBloc>().add(ColocarJugada(x, y, state.numeroAColocar!));
                                     
                                   } else if (casilla.esInicial || !casilla.estaVacia) {
-                                    // Intentas tocar una casilla bloqueada o ya ocupada
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Casilla no disponible.')),
-                                    );
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Casilla no disponible.')));
                                   }
                                 } else {
-                                  // --- LÓGICA DE FASE DE CONFIGURACIÓN ---
                                   if (casilla.esInicial) {
                                     final box = celdaContext.findRenderObject() as RenderBox;
                                     final centroGlobal = box.localToGlobal(box.size.center(Offset.zero));
@@ -118,35 +138,53 @@ class PantallaTablero extends StatelessWidget {
                                   }
                                 }
                               },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                decoration: BoxDecoration(
-                                  color: _obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id), 
-                                  border: Border.all(
-                                    color: mostrarBrillo ? Colors.yellowAccent : Colors.black26, 
-                                    width: mostrarBrillo ? 3.0 : 1.0
-                                  ),
-                                  boxShadow: mostrarBrillo ? [
-                                    BoxShadow(
-                                      color: Colors.yellowAccent.withOpacity(0.8),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
-                                    )
-                                  ] : [],
-                                ),
-                                child: Center(
-                                  child: casilla.valor != null
-                                      ? Text(
-                                          casilla.valor.toString(),
-                                          style: TextStyle(
-                                            fontSize: 24, 
-                                            fontWeight: FontWeight.bold,
-                                            // Oscurecemos el texto de los números iniciales para diferenciarlos
-                                            color: casilla.esInicial ? Colors.black87 : Colors.blue[900],
-                                          ),
-                                        )
-                                      : null,
-                                ),
+                              
+                              // 2. ENVOLVEMOS EN ANIMATEDBUILDER PARA SINCRONIZAR CON EL PULSO
+                              child: AnimatedBuilder(
+                                animation: _animController,
+                                builder: (context, child) {
+                                  
+                                  Color colorBorde = Colors.black26;
+                                  double anchoBorde = 1.0;
+                                  List<BoxShadow> sombras = [];
+
+                                  if (mostrarBrilloInicial) {
+                                    colorBorde = Colors.yellowAccent;
+                                    anchoBorde = 3.0;
+                                    sombras = [BoxShadow(color: Colors.yellowAccent.withOpacity(0.8), blurRadius: 10, spreadRadius: 2)];
+                                  } else if (esSugerencia) {
+                                    // EFECTO DE PULSO VERDE MIENTRAS ESTÉ ACTIVA LA SUGERENCIA
+                                    colorBorde = Color.lerp(Colors.greenAccent, Colors.green[900], _animController.value)!;
+                                    anchoBorde = 3.0;
+                                    sombras = [
+                                      BoxShadow(
+                                        color: Colors.greenAccent.withOpacity(0.8 * _animController.value),
+                                        blurRadius: 15 * _animController.value,
+                                        spreadRadius: 3 * _animController.value,
+                                      )
+                                    ];
+                                  }
+
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: _obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id), 
+                                      border: Border.all(color: colorBorde, width: anchoBorde),
+                                      boxShadow: sombras,
+                                    ),
+                                    child: Center(
+                                      child: casilla.valor != null
+                                          ? Text(
+                                              casilla.valor.toString(),
+                                              style: TextStyle(
+                                                fontSize: 24, 
+                                                fontWeight: FontWeight.bold,
+                                                color: casilla.esInicial ? Colors.black87 : Colors.blue[900],
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  );
+                                }
                               ),
                             );
                           }
@@ -156,11 +194,9 @@ class PantallaTablero extends StatelessWidget {
                   ),
                 ),
                 
-                // PANEL DE CONTROL INFERIOR
-                // Al usar "is" directamente aquí, Dart promueve "state" mágicamente
-                if (state is JuegoEnProgreso) 
+                if (state is JuegoEnProgreso)
                   Container(
-                    height: 120, // Altura fija para evitar saltos
+                    height: 120, 
                     alignment: Alignment.center,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -171,8 +207,7 @@ class PantallaTablero extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             _DadoBoton(
-                              // ¡Mira qué limpio queda sin los casteos!
-                              valor: state.dado1, 
+                              valor: state.dado1,
                               esAncla: state.anclaSeleccionada == state.dado1,
                               onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(state.dado1, state.dado2)),
                             ),
@@ -194,7 +229,7 @@ class PantallaTablero extends StatelessWidget {
                   )
                 else
                   Visibility(
-                    visible: !estaEnProgreso,
+                    visible: state is! JuegoEnProgreso,
                     maintainSize: true, 
                     maintainAnimation: true,
                     maintainState: true,
@@ -205,11 +240,7 @@ class PantallaTablero extends StatelessWidget {
                           backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
                           padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
                         ),
-                        onPressed: estaListoParaIniciar 
-                          ? () {
-                              context.read<JuegoBloc>().add(ComenzarPartida());
-                            } 
-                          : null,
+                        onPressed: estaListoParaIniciar ? () => context.read<JuegoBloc>().add(ComenzarPartida()) : null,
                         child: Text(
                           'INICIAR',
                           style: TextStyle(
@@ -230,7 +261,6 @@ class PantallaTablero extends StatelessWidget {
   }
 }
 
-// Widget extra para los botones de los dados
 class _DadoBoton extends StatelessWidget {
   final int valor;
   final bool esAncla;
