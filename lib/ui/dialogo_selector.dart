@@ -33,12 +33,14 @@ Future<void> mostrarSelectorAbanico(BuildContext context, int x, int y, JuegoSta
       if (context.mounted) {
         _mostrarConfirmacionReemplazo(context, existente.coordenada.x, existente.coordenada.y, x, y, numero, casillaActual.valor);
       }
-    } else {
+    } else{
+      /*
       // --- INICIO DE BROMA (Comentar para desactivar) ---
       if (state.tablero.contarNumerosIniciales() == 5 && context.mounted) {
         await _mostrarBromaPago(context);
       }
       // --- FIN DE BROMA ---
+      */
 
       if (context.mounted) context.read<JuegoBloc>().add(InsertarValorInicial(x, y, numero));
     }
@@ -258,6 +260,7 @@ void _mostrarConfirmacionReemplazo(BuildContext context, int xOrigen, int yOrige
 // ==========================================
 // BROMA DE PAGO (Borrar o comentar en producción)
 // ==========================================
+/*
 Future<void> _mostrarBromaPago(BuildContext context) async {
   await showDialog(
     context: context,
@@ -329,4 +332,4 @@ Future<void> _mostrarBromaPago(BuildContext context) async {
       );
     }
   );
-}
+}*/

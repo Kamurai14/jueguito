@@ -74,14 +74,19 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     {String? mensajeAlerta}
   ) {
     final rand = Random();
-    return JuegoEnProgreso(
-      tablero,
-      dado1: rand.nextInt(6) + 1,
-      dado2: rand.nextInt(6) + 1,
-      puntuacion: puntuacionActual,
-      zonasCompletadas: zonasCompletadas,
-      mensajeAlerta: mensajeAlerta,
-    );
+  final siguienteId = (state is JuegoEnProgreso) 
+      ? (state as JuegoEnProgreso).idTirada + 1 
+      : 1;
+
+  return JuegoEnProgreso(
+    tablero,
+    dado1: rand.nextInt(6) + 1,
+    dado2: rand.nextInt(6) + 1,
+    puntuacion: puntuacionActual,
+    zonasCompletadas: zonasCompletadas,
+    mensajeAlerta: mensajeAlerta,
+    idTirada: siguienteId,
+  );
   }
 
   // --- EVENTOS ---
@@ -96,6 +101,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         actual.tablero,
         dado1: actual.dado1,
         dado2: actual.dado2,
+        idTirada: actual.idTirada, 
         anclaSeleccionada: event.ancla,
         numeroAColocar: event.numeroAColocar,
         puntuacion: actual.puntuacion,

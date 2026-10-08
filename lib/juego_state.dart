@@ -33,6 +33,7 @@ class JuegoEnProgreso extends JuegoState {
   final int dado2;
   final int? anclaSeleccionada;
   final int? numeroAColocar;
+  final int idTirada;
   
   // Novedades: Puntuación y zonas completadas
   final int puntuacion;
@@ -43,6 +44,7 @@ class JuegoEnProgreso extends JuegoState {
     super.tablero, {
     required this.dado1,
     required this.dado2,
+    required this.idTirada,
     this.anclaSeleccionada,
     this.numeroAColocar,
     this.puntuacion = 0, // Inicia en 0 por defecto

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
+import 'dart:math';
+import 'package:audioplayers/audioplayers.dart';
 
 class PanelControles extends StatelessWidget {
   final JuegoState state;
@@ -26,14 +28,18 @@ class PanelControles extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _DadoBoton(
+                  key: const ValueKey('dado1'),
                   valor: estadoJuego.dado1,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado1,
+                  idTirada: estadoJuego.idTirada,
                   onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2)),
                 ),
                 const SizedBox(width: 20),
                 _DadoBoton(
+                  key: const ValueKey('dado2'),
                   valor: estadoJuego.dado2,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado2,
+                  idTirada: estadoJuego.idTirada,
                   onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1)),
                 ),
                 const SizedBox(width: 30),
@@ -76,37 +82,102 @@ class PanelControles extends StatelessWidget {
   }
 }
 
-class _DadoBoton extends StatelessWidget {
+// Convertimos el botón en un StatefulWidget para manejar su propia animación
+class _DadoBoton extends StatefulWidget {
   final int valor;
   final bool esAncla;
+  final int idTirada;
   final VoidCallback onTap;
 
-  const _DadoBoton({required this.valor, required this.esAncla, required this.onTap});
+  const _DadoBoton({super.key, required this.valor, required this.esAncla, required this.idTirada, required this.onTap});
+
+  @override
+  State<_DadoBoton> createState() => _DadoBotonState();
+}
+
+class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
+  @override
+  void initState() {
+    super.initState();
+    // La animación durará medio segundo
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _animController.forward();
+    _reproducirSonido();
+  }
+
+  // Este método mágico de Flutter detecta cuando el BLoC nos manda nuevos números
+  @override
+  void didUpdateWidget(covariant _DadoBoton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Si el valor del dado es diferente al que teníamos, significa que "tiramos" los dados
+    if (oldWidget.idTirada != widget.idTirada) {
+      _animController.forward(from: 0.0);
+      _reproducirSonido();
+    }
+  }
+
+  void _reproducirSonido() async {
+    try {
+      // AudioPlayers asume automáticamente que estás dentro de la carpeta "assets/"
+      await _audioPlayer.play(AssetSource('sonidos/dados.mp3'));
+    } catch (e) {
+      debugPrint("Aún no has agregado el archivo de audio.");
+    }
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: esAncla ? Colors.blue : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: esAncla ? Colors.blue[900]! : Colors.black45, width: 2),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]
-        ),
-        child: Center(
-          child: Text(
-            valor.toString(), 
-            style: TextStyle(
-              fontSize: 24, 
-              fontWeight: FontWeight.bold, 
-              color: esAncla ? Colors.white : Colors.black87
-            )
-          ),
-        ),
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _animController,
+        builder: (context, child) {
+          // Hacemos que el dado dé dos vueltas completas (2 * pi * 2)
+          double angulo = _animController.value * 2 * pi * 2;
+          
+          return Transform(
+            alignment: Alignment.center,
+            // rotateZ lo hace girar, rotateX le da el efecto de "voltereta" 3D
+            transform: Matrix4.identity()..rotateZ(angulo)..rotateX(angulo / 2),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: widget.esAncla ? Colors.blue : Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: widget.esAncla ? Colors.blue[900]! : Colors.black45, width: 2),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]
+              ),
+              child: Center(
+                child: Text(
+                  // Un toque genial: Mientras se anima (rueda), ocultamos el número y ponemos un "?"
+                  _animController.isAnimating ? '?' : widget.valor.toString(), 
+                  style: TextStyle(
+                    fontSize: 24, 
+                    fontWeight: FontWeight.bold, 
+                    color: widget.esAncla ? Colors.white : Colors.black87
+                  )
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
