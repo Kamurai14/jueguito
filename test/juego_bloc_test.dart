@@ -1,0 +1,90 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:bloc_test/bloc_test.dart';
+
+import 'package:jueguito/juego_bloc.dart';
+import 'package:jueguito/juego_event.dart';
+import 'package:jueguito/juego_state.dart';
+import 'package:jueguito/tablero.dart'; 
+import 'package:jueguito/capa_zonas.dart';
+
+void main() {
+  group('JuegoBloc - Pruebas de Dados y Puntuación', () {
+    late Tablero tableroPrueba;
+    late CapaZonas capaPrueba;
+
+    setUp(() {
+      capaPrueba = CapaZonas();
+      tableroPrueba = Tablero(capaPrueba);
+    });
+
+    // 1. PRUEBA DE DADOS: Validar rangos
+    blocTest<JuegoBloc, JuegoState>(
+      'PasarTurno genera números aleatorios válidos entre 1 y 6 para ambos dados',
+      build: () => JuegoBloc(tableroPrueba), 
+      seed: () => JuegoEnProgreso(
+        tableroPrueba,
+        dado1: 0, 
+        dado2: 0, 
+        puntuacion: 0,
+        zonasCompletadas: {},
+        idTirada: 1,
+      ),
+      act: (bloc) => bloc.add(PasarTurno()),
+      expect: () => [
+        isA<JuegoEnProgreso>()
+            .having((s) => s.dado1, 'dado 1', inInclusiveRange(1, 6))
+            .having((s) => s.dado2, 'dado 2', inInclusiveRange(1, 6)),
+      ],
+    );
+
+    // 2. PRUEBA DE JUGADA NORMAL: Avanza turno pero no da puntos (la zona no está llena)
+    blocTest<JuegoBloc, JuegoState>(
+      'ColocarJugada válida avanza el turno (idTirada) pero mantiene la puntuación',
+      build: () => JuegoBloc(tableroPrueba),
+      seed: () => JuegoEnProgreso(
+        tableroPrueba,
+        dado1: 4,
+        dado2: 2,
+        anclaSeleccionada: 4, 
+        puntuacion: 10, 
+        zonasCompletadas: {},
+        idTirada: 1,
+      ),
+      act: (bloc) {
+        // IMPORTANTE: Asegúrate de que poner un 2 en la coordenada (0, 0) 
+        // sea una jugada VÁLIDA según las reglas reales de tu tablero inicial.
+        bloc.add(ColocarJugada(0, 0, 2));
+      },
+      expect: () => [
+        isA<JuegoEnProgreso>()
+            .having((s) => s.puntuacion, 'puntuacion se mantiene igual', 10)
+            .having((s) => s.idTirada, 'el turno avanza', 2), // El idTirada debe subir a 2
+      ],
+    );
+
+    // 3. PRUEBA DE JUGADA INVÁLIDA: No avanza turno, no da puntos, rechaza el movimiento
+    blocTest<JuegoBloc, JuegoState>(
+      'ColocarJugada en una casilla ya ocupada (inválida) es ignorada por el BLoC',
+      build: () => JuegoBloc(tableroPrueba),
+      seed: () => JuegoEnProgreso(
+        tableroPrueba,
+        dado1: 3,
+        dado2: 1,
+        anclaSeleccionada: 3,
+        puntuacion: 20,
+        zonasCompletadas: {}, 
+        idTirada: 2, // Turno actual
+      ),
+      act: (bloc) {
+        // 1. Trucamos el tablero llenando la casilla (0,0) con un 5 para que esté ocupada
+        tableroPrueba.obtenerCasilla(0, 0).valor = 5; 
+        
+        // 2. Disparamos el evento intentando poner un 1 en esa misma casilla
+        bloc.add(ColocarJugada(0, 0, 1)); 
+      },
+      // Cuando un evento es rechazado por la lógica (como un movimiento inválido), 
+      // el BLoC no emite ningún estado nuevo. Esperamos una lista vacía [].
+      expect: () => [], 
+    );
+  });
+}

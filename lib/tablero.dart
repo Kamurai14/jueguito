@@ -80,6 +80,9 @@ class Tablero {
 
   bool intentarColocarNumero(int x, int y, int numero) {
     Casilla casillaTarget = obtenerCasilla(x, y);
+    if (!casillaTarget.estaVacia) {
+      return false; 
+    }
     ZonaJuego zonaTarget = capa.obtenerZonaEn(casillaTarget.coordenada);
 
     List<int> actuales = obtenerNumerosEnZona(zonaTarget.id, excluir: casillaTarget.coordenada);
