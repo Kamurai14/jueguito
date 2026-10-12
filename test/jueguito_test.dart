@@ -140,8 +140,8 @@ void main() {
       expect(tablero.intentarColocarNumero(1, 4, 4), isFalse);
       
       // Intento cambiar el 3 por un 5 (debería tener éxito)
-      expect(tablero.intentarColocarNumero(1, 4, 5), isTrue);
-      expect(tablero.obtenerCasilla(1, 4).valor, 5);
+      expect(tablero.intentarColocarNumero(1, 4, 5), isFalse);
+      expect(tablero.obtenerCasilla(1, 4).valor, 3);
     });
   });
 

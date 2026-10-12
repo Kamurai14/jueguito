@@ -86,5 +86,79 @@ void main() {
       // el BLoC no emite ningún estado nuevo. Esperamos una lista vacía [].
       expect: () => [], 
     );
+
+    blocTest<JuegoBloc, JuegoState>(
+      'El juego pasa a JuegoActivo solo cuando se colocan los 6 números iniciales',
+      build: () => JuegoBloc(tableroPrueba),
+      seed: () => JuegoEsperandoIniciales(tableroPrueba, numerosColocados: 5),
+      act: (bloc) {
+        // 1. Llenamos 5 casillas iniciales "a mano" en el tablero
+        int llenadas = 0;
+        for (int x = 0; x < Tablero.tamano; x++) {
+          for (int y = 0; y < Tablero.tamano; y++) {
+            final c = tableroPrueba.obtenerCasilla(x, y);
+            if (c.esInicial && c.estaVacia && llenadas < 5) {
+              c.valor = 1; 
+              llenadas++;
+            }
+          }
+        }
+        
+        // 2. Buscamos la 6ta casilla (la única vacía que queda) y lanzamos el evento
+        for (int x = 0; x < Tablero.tamano; x++) {
+          for (int y = 0; y < Tablero.tamano; y++) {
+            final c = tableroPrueba.obtenerCasilla(x, y);
+            if (c.esInicial && c.estaVacia) {
+              bloc.add(InsertarValorInicial(x, y, 6));
+              return; 
+            }
+          }
+        }
+      },
+      expect: () => [isA<JuegoActivo>()],
+    );
+
+  test('esColocacionValida devuelve false si la regla de la zona no permite el número', () {
+      // 1. Busca una casilla y pon un número que sepas que restringirá la zona
+      // (ej. si la zona no permite repetidos, pon un 4)
+      tableroPrueba.intentarColocarNumero(1, 1, 4); 
+      
+      // 2. Intenta poner otro 4 en la misma zona pero en diferente casilla
+      bool esValida = tableroPrueba.esColocacionValida(1, 2, 4); 
+      
+      // 3. Verificamos que tu CapaZonas haga bien su trabajo y lo rechace
+      expect(esValida, isFalse);
+    });
+
+    blocTest<JuegoBloc, JuegoState>(
+      'Completar la última casilla de una zona otorga los puntos correspondientes',
+      build: () => JuegoBloc(tableroPrueba),
+      seed: () => JuegoEnProgreso(
+        tableroPrueba, dado1: 5, dado2: 2, anclaSeleccionada: 5, puntuacion: 0, zonasCompletadas: {}, idTirada: 1,
+      ),
+      setUp: () {
+        // 1. Encontramos a qué zona pertenece la casilla (0,0)
+        String idZona = tableroPrueba.obtenerZonaDeCasilla(0, 0).id;
+        
+        // 2. Llenamos TODAS las casillas de esa zona en el tablero
+        for (int x = 0; x < Tablero.tamano; x++) {
+          for (int y = 0; y < Tablero.tamano; y++) {
+            if (tableroPrueba.obtenerZonaDeCasilla(x, y).id == idZona) {
+              tableroPrueba.obtenerCasilla(x, y).valor = 1; 
+            }
+          }
+        }
+        // 3. Vaciamos ÚNICAMENTE la (0,0) para que nuestra jugada sea la que cierre la zona
+        tableroPrueba.obtenerCasilla(0, 0).valor = null;
+      },
+      act: (bloc) {
+        bloc.add(ColocarJugada(0, 0, 5));
+      },
+      expect: () => [
+        isA<JuegoEnProgreso>()
+            .having((s) => s.puntuacion, 'suma puntos', greaterThan(0))
+            .having((s) => s.zonasCompletadas.length, 'registra la zona', 1),
+      ],
+    );
   });
 }
