@@ -160,5 +160,69 @@ void main() {
             .having((s) => s.zonasCompletadas.length, 'registra la zona', 1),
       ],
     );
+
+    blocTest<JuegoBloc, JuegoState>(
+      'QuitarValorInicial regresa el estado a JuegoEsperandoIniciales si los números bajan de 6',
+      build: () => JuegoBloc(tableroPrueba),
+      setUp: () {
+        // Pre-llenamos 6 casillas iniciales en el tablero para simular que está listo
+        int llenadas = 0;
+        for (int x = 0; x < Tablero.tamano; x++) {
+          for (int y = 0; y < Tablero.tamano; y++) {
+            final c = tableroPrueba.obtenerCasilla(x, y);
+            if (c.esInicial && llenadas < 6) {
+              c.valor = llenadas + 1; 
+              llenadas++;
+            }
+          }
+        }
+      },
+      // Hacemos que el bloc inicie creyendo que el juego ya está activo (botón verde encendido)
+      seed: () => JuegoActivo(tableroPrueba),
+      act: (bloc) {
+        // Buscamos la primera casilla inicial ocupada y le disparamos el evento de quitar
+        for (int x = 0; x < Tablero.tamano; x++) {
+          for (int y = 0; y < Tablero.tamano; y++) {
+            final c = tableroPrueba.obtenerCasilla(x, y);
+            if (c.esInicial && !c.estaVacia) {
+              bloc.add(QuitarValorInicial(x, y));
+              return;
+            }
+          }
+        }
+      },
+      expect: () => [
+        // Debe regresar al estado de espera con exactamente 5 números colocados
+        isA<JuegoEsperandoIniciales>()
+            .having((s) => s.numerosColocados, 'contador baja a 5', 5),
+      ],
+    );
+
+    blocTest<JuegoBloc, JuegoState>(
+      'SeleccionarAncla guarda el ancla y el número a colocar sin avanzar el turno',
+      build: () => JuegoBloc(tableroPrueba),
+      seed: () => JuegoEnProgreso(
+        tableroPrueba,
+        dado1: 4,
+        dado2: 2,
+        anclaSeleccionada: null, // Inicia sin selección
+        numeroAColocar: null,
+        puntuacion: 10,
+        zonasCompletadas: {},
+        idTirada: 3, 
+      ),
+      act: (bloc) {
+        // El jugador elige el dado 1 (valor 4) como ancla, 
+        // lo que significa que el dado 2 (valor 2) es el que va a colocar
+        bloc.add(SeleccionarAncla(4, 2));
+      },
+      expect: () => [
+        isA<JuegoEnProgreso>()
+            .having((s) => s.anclaSeleccionada, 'guarda el ancla', 4)
+            .having((s) => s.numeroAColocar, 'guarda el número a colocar', 2)
+            .having((s) => s.idTirada, 'no avanza el turno', 3)
+            .having((s) => s.puntuacion, 'no altera los puntos', 10),
+      ],
+    );
   });
 }
