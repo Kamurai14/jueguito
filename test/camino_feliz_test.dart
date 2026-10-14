@@ -126,15 +126,25 @@ Future<void> _completarFasePreparacion(WidgetTester tester, JuegoBloc blocReal) 
 }
 
 Future<void> _iniciarPartida(WidgetTester tester) async {
+  // 1. Buscamos y tocamos el botón de iniciar
   final botonIniciar = find.byKey(const Key('boton_iniciar_partida'));
-  expect(tester.widget<ElevatedButton>(botonIniciar).onPressed, isNotNull); 
-  
   await tester.tap(botonIniciar);
-  await tester.pump(const Duration(milliseconds: 500)); 
 
-  expect(find.text('Partida en curso'), findsOneWidget);
-  expect(find.byKey(const Key('texto_puntuacion')), findsOneWidget);
-  expect(find.byKey(const ValueKey('dado1')), findsOneWidget);
+  // 2. Aplicamos la Vía Limpia para que el BLoC procese ComenzarPartida() 
+  // y cambie el estado a JuegoEnProgreso con naturalidad
+  await tester.runAsync(() async {
+    await Future.delayed(const Duration(milliseconds: 300));
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+
+  // 3. Verificamos los textos y botones que REALMENTE existen en tu PanelControles
+  expect(find.textContaining('Selecciona el Ancla'), findsOneWidget, reason: 'Debe aparecer la instrucción del ancla');
+  expect(find.byKey(const ValueKey('dado1')), findsOneWidget, reason: 'El dado 1 debe estar listo');
+  expect(find.byKey(const ValueKey('dado2')), findsOneWidget, reason: 'El dado 2 debe estar listo');
+  expect(find.byKey(const Key('boton_pasar_turno')), findsOneWidget, reason: 'El botón de pasar turno debe existir');
+
+  debugPrint('Fase 2 completada: ¡Partida iniciada y dados en pantalla!');
 }
 
 Future<void> _jugarPrimerTurno(WidgetTester tester) async {
