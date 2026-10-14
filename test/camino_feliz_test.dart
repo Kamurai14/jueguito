@@ -6,8 +6,24 @@ import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart'; 
+import 'package:flutter/services.dart';
 
 void main() {
+
+  // Aseguramos que el entorno de pruebas esté inicializado
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  // === TRUCO PARA PLUGINS NATIVOS ===
+  // Interceptamos las llamadas de audioplayers y devolvemos "null" para que 
+  // el test crea que el sonido se reprodujo con éxito sin buscar hardware real.
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('xyz.luan/audioplayers.global'),
+    (MethodCall methodCall) async => null,
+  );
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+    const MethodChannel('xyz.luan/audioplayers'),
+    (MethodCall methodCall) async => null,
+  );
   group('Test de Integración - Camino Feliz del Juego', () {
     late JuegoBloc blocReal;
 
@@ -37,7 +53,7 @@ void main() {
 
       await _completarFasePreparacion(tester, blocReal);
       await _iniciarPartida(tester);
-      await _jugarPrimerTurno(tester);
+      await _jugarPrimerTurno(tester, blocReal);
     });
   });
 }
@@ -147,15 +163,68 @@ Future<void> _iniciarPartida(WidgetTester tester) async {
   debugPrint('Fase 2 completada: ¡Partida iniciada y dados en pantalla!');
 }
 
-Future<void> _jugarPrimerTurno(WidgetTester tester) async {
-  // Tocamos el dado 1 para seleccionarlo como ancla
-  await tester.tap(find.byKey(const ValueKey('dado1')));
-  await tester.pump(const Duration(milliseconds: 100)); 
+Future<void> _jugarPrimerTurno(WidgetTester tester, JuegoBloc blocReal) async {
+  // 1. Leemos el estado para saber qué dados nos tocaron
+  final estadoInicial = blocReal.state as JuegoEnProgreso;
+  final idTiradaInicial = estadoInicial.idTirada;
+  
+  debugPrint('Fase 3: Turno iniciado. Dados rodaron: ${estadoInicial.dado1} y ${estadoInicial.dado2}');
 
-  // Tocamos el botón de pasar turno (ya que no sabemos qué números cayeron por el azar)
-  await tester.tap(find.byKey(const Key('boton_pasar_turno')));
-  await tester.pump(const Duration(milliseconds: 500)); 
+  // 2. Seleccionamos el ancla (elegiremos siempre el dado 1 para la prueba)
+  final dado1Finder = find.byKey(const ValueKey('dado1'));
+  
+  // Extraemos el widget y ejecutamos su onTap directo para evitar bloqueos por la animación de giro
+  // Nota: Si tu widget _DadoBoton no expone la propiedad onTap públicamente, usa tester.tap(dado1Finder)
+  await tester.tap(dado1Finder);
+  
+  // Damos tiempo a que el Bloc registre el ancla
+  await tester.runAsync(() async {
+    await Future.delayed(const Duration(milliseconds: 200));
+  });
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
 
-  // Verificamos que seguimos vivos en la partida
-  expect(find.text('Partida en curso'), findsOneWidget);
+  // Verificamos que el ancla se haya registrado en el estado
+  final estadoConAncla = blocReal.state as JuegoEnProgreso;
+  expect(estadoConAncla.anclaSeleccionada, estadoConAncla.dado1, reason: 'El dado 1 debió registrarse como ancla');
+  debugPrint('Ancla seleccionada: ${estadoConAncla.anclaSeleccionada}. Buscando casilla válida...');
+
+  // 3. El Bot de Fuerza Bruta: Iteramos por el tablero intentando colocar la pieza
+  bool jugadaCompletada = false;
+  
+  for (int x = 0; x < 7 && !jugadaCompletada; x++) {
+    for (int y = 0; y < 7 && !jugadaCompletada; y++) {
+      final casillaFinder = find.byKey(Key('casilla_${x}_${y}'));
+      
+      if (tester.any(casillaFinder)) {
+        // Ejecutamos el tap en la casilla evadiendo barreras visuales
+        final celdaWidget = tester.widget<GestureDetector>(casillaFinder);
+        if (celdaWidget.onTap != null) {
+          celdaWidget.onTap!();
+          
+          // Dejamos que el Bloc evalúe si la jugada es válida según las reglas del juego
+          await tester.runAsync(() async {
+            await Future.delayed(const Duration(milliseconds: 50)); // Micro-pausa para procesar
+          });
+          
+          // Verificamos si el turno avanzó (el Bloc cambió el idTirada)
+          final estadoEvaluado = blocReal.state as JuegoEnProgreso;
+          if (estadoEvaluado.idTirada != idTiradaInicial) {
+            jugadaCompletada = true;
+            debugPrint('✅ ÉXITO: El Bloc aceptó la jugada. Pieza colocada en la casilla ($x, $y)');
+          }
+        }
+      }
+    }
+  }
+
+  // 4. El Gran Final de la Fase 3
+  // Redibujamos la pantalla para el nuevo turno
+  await tester.pump(); 
+  
+  expect(
+    jugadaCompletada, 
+    isTrue, 
+    reason: 'El test revisó todo el tablero y no encontró ninguna jugada válida para los dados ${estadoInicial.dado1} y ${estadoInicial.dado2}'
+  );
 }

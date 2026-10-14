@@ -4,6 +4,7 @@ import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/juego_state.dart';
 import 'dart:math';
+import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 
 class PanelControles extends StatelessWidget {
@@ -99,27 +100,31 @@ class _DadoBoton extends StatefulWidget {
 
 class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  AudioPlayer? _audioPlayer; // 1. Lo hacemos opcional (nullable)
+
+  // 2. Detectamos si la app está siendo ejecutada por un test automatizado
+  final bool esTest = Platform.environment.containsKey('FLUTTER_TEST');
 
   @override
   void initState() {
     super.initState();
-    // La animación durará medio segundo
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
 
+    // 3. Solo creamos el motor de audio en la vida real
+    if (!esTest) {
+      _audioPlayer = AudioPlayer();
+    }
+
     _animController.forward();
     _reproducirSonido();
   }
 
-  // Este método mágico de Flutter detecta cuando el BLoC nos manda nuevos números
   @override
   void didUpdateWidget(covariant _DadoBoton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
-    // Si el valor del dado es diferente al que teníamos, significa que "tiramos" los dados
     if (oldWidget.idTirada != widget.idTirada) {
       _animController.forward(from: 0.0);
       _reproducirSonido();
@@ -127,9 +132,11 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   }
 
   void _reproducirSonido() async {
+    // 4. Si es un test, abortamos inmediatamente y no hacemos ruido
+    if (esTest || _audioPlayer == null) return; 
+    
     try {
-      // AudioPlayers asume automáticamente que estás dentro de la carpeta "assets/"
-      await _audioPlayer.play(AssetSource('sonidos/dados.mp3'));
+      await _audioPlayer!.play(AssetSource('sonidos/dados.mp3'));
     } catch (e) {
       debugPrint("Aún no has agregado el archivo de audio.");
     }
@@ -138,7 +145,7 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   @override
   void dispose() {
     _animController.dispose();
-    _audioPlayer.dispose();
+    _audioPlayer?.dispose(); // El signo de interrogación evita que truene si es nulo
     super.dispose();
   }
 
