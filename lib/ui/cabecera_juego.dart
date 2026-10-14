@@ -25,7 +25,9 @@ class CabeceraJuego extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(textoCabecera, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(textoCabecera,
+          key: const Key('texto_cabecera_estado'), 
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           
           if (state is JuegoEnProgreso)
             Container(
@@ -37,6 +39,7 @@ class CabeceraJuego extends StatelessWidget {
               child: Text(
                 // Aquí el casteo es seguro porque está dentro del if(state is JuegoEnProgreso)
                 'Puntos: ${(state as JuegoEnProgreso).puntuacion}', 
+                key: const Key('texto_puntuacion'),
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
               ),
             ),

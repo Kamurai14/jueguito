@@ -37,6 +37,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: const Key('pantalla_tablero_scaffold'),
       appBar: AppBar(title: const Text('Juego 7x7')),
       body: Center(
         child: BlocConsumer<JuegoBloc, JuegoState>(
@@ -44,6 +45,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             if (state is JuegoEnProgreso && state.mensajeAlerta != null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
+                  key: const Key('alerta_snack_bar'),
                   content: Text(state.mensajeAlerta!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   backgroundColor: Colors.amber[800],
                   duration: const Duration(seconds: 4),

@@ -45,6 +45,7 @@ class CuadriculaTablero extends StatelessWidget {
             }
 
             return GestureDetector(
+              key: Key('casilla_${x}_${y}'),
               onTap: () {
                 if (state is JuegoEnProgreso) {
                   // Casteo local para la lógica de validación del clic

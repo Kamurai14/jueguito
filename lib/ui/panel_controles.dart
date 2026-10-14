@@ -44,6 +44,7 @@ class PanelControles extends StatelessWidget {
                 ),
                 const SizedBox(width: 30),
                 TextButton(
+                  key: const Key('boton_pasar_turno'),
                   onPressed: () => context.read<JuegoBloc>().add(PasarTurno()),
                   child: const Text('Pasar Turno', style: TextStyle(color: Colors.red)),
                 )
@@ -62,6 +63,7 @@ class PanelControles extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 24.0),
           child: ElevatedButton(
+            key: const Key('boton_iniciar_partida'),
             style: ElevatedButton.styleFrom(
               backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),

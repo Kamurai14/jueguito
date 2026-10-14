@@ -113,6 +113,7 @@ class _PantallaAbanicoState extends State<PantallaAbanico> {
               children: [
                 if (widget.valorActual != null && !_volando)
                   ElevatedButton.icon(
+                    key: const Key('boton_borrar_abanico'),
                     icon: const Icon(Icons.delete),
                     label: const Text('Borrar número'),
                     style: ElevatedButton.styleFrom(
@@ -125,6 +126,7 @@ class _PantallaAbanicoState extends State<PantallaAbanico> {
                 const SizedBox(height: 16),
                 if (!_volando)
                   TextButton(
+                    key: const Key('boton_cancelar_abanico'),
                     onPressed: () => Navigator.of(context).pop(),
                     style: TextButton.styleFrom(foregroundColor: Colors.white70),
                     child: const Text('Cancelar', style: TextStyle(fontSize: 18)),
@@ -193,6 +195,7 @@ class _PantallaAbanicoState extends State<PantallaAbanico> {
                   duration: const Duration(milliseconds: 300),
                   opacity: opacidad,
                   child: GestureDetector(
+                    key: Key('carta_abanico_$numero'),
                     onTap: esElMismoDeLaCasilla || _volando ? null : () => _seleccionarCarta(numero),
                     child: Container(
                       width: anchoCarta,
@@ -241,10 +244,12 @@ void _mostrarConfirmacionReemplazo(BuildContext context, int xOrigen, int yOrige
         content: Text(mensaje),
         actions: [
           TextButton(
+            key: const Key('boton_cancelar_reemplazo'),
             onPressed: () => Navigator.of(confirmContext).pop(),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
+            key: const Key('boton_confirmar_reemplazo'),
             onPressed: () {
               context.read<JuegoBloc>().add(MoverValorInicial(xOrigen, yOrigen, xDestino, yDestino, numero));
               Navigator.of(confirmContext).pop();
