@@ -27,7 +27,12 @@ class CabeceraJuego extends StatelessWidget {
         children: [
           Text(textoCabecera,
           key: const Key('texto_cabecera_estado'), 
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          style: const TextStyle(
+            fontSize: 18, 
+            fontWeight: FontWeight.bold, 
+            color: Colors.white // <-- Hacemos el texto blanco
+          )
+        ),
           
           if (state is JuegoEnProgreso)
             Container(

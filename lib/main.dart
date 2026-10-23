@@ -1,22 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jueguito/capa_zonas.dart';
-import 'package:jueguito/tablero.dart';
-import 'package:jueguito/juego_bloc.dart';
-import 'package:jueguito/ui/pantalla_tablero.dart';
+import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 
 void main() {
-  // Le pasamos TipoMapa.mapa1 para que sepa qué tablero dibujar al abrir la app
-  CapaZonas nivel1 = CapaZonas(TipoMapa.mapa1);
-  Tablero tableroInicial = Tablero(nivel1);
-
-  runApp(MiJuegoApp(tablero: tableroInicial));
+  runApp(const MiJuegoApp());
 }
 
 class MiJuegoApp extends StatelessWidget {
-  final Tablero tablero;
-
-  const MiJuegoApp({super.key, required this.tablero});
+  const MiJuegoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +15,8 @@ class MiJuegoApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      home: BlocProvider(
-        create: (context) => JuegoBloc(tablero),
-        child: const PantallaTablero(),
-      ),
+      // Arrancamos directamente en el menú de mapas
+      home: const PantallaSeleccionMapas(), 
     );
   }
 }

@@ -37,8 +37,14 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.blueGrey[900], // <-- 1. Fondo oscuro para el juego
       key: const Key('pantalla_tablero_scaffold'),
-      appBar: AppBar(title: const Text('Juego 7x7')),
+      appBar: AppBar(
+        backgroundColor: Colors.blueGrey[900], // <-- 2. AppBar oscuro
+        foregroundColor: Colors.white, // <-- 3. Flecha de retroceso y título en blanco
+        elevation: 0,
+        title: const Text('Juego 7x7'),
+      ),
       body: Center(
         child: BlocConsumer<JuegoBloc, JuegoState>(
           listener: (context, state) {

@@ -24,7 +24,13 @@ class PanelControles extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Selecciona el Ancla:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Selecciona el Ancla:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -62,12 +68,11 @@ class PanelControles extends StatelessWidget {
         maintainSize: true, 
         maintainAnimation: true,
         maintainState: true,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: ElevatedButton(
+        child: ElevatedButton(
             key: const Key('boton_iniciar_partida'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: estaListoParaIniciar ? Colors.green : Colors.grey,
+              // Cambiamos el gris oscuro por un blueGrey más claro para que resalte
+              backgroundColor: estaListoParaIniciar ? Colors.green : Colors.blueGrey[600],
               padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
             ),
             onPressed: estaListoParaIniciar ? () => context.read<JuegoBloc>().add(ComenzarPartida()) : null,
@@ -76,10 +81,10 @@ class PanelControles extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: estaListoParaIniciar ? Colors.white : Colors.black38,
+                // Cambiamos el black38 por white70 para que las letras se lean claramente
+                color: estaListoParaIniciar ? Colors.white : Colors.white70,
               ),
             ),
-          ),
         ),
       );
     }
