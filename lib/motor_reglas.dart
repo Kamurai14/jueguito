@@ -29,14 +29,19 @@ class MotorReglas {
       return numerosUnicos.length < 2;
     }
 
-    // REGLA NARANJA 1 (NA1): Solo números del 4 al 6 (pueden repetirse)
-    if (idZona.startsWith('NA1')) {
-      return numeroAColocar >= 4 && numeroAColocar <= 6;
-    }
-
-    // REGLA NARANJA 2 (NA2): Solo números del 1 al 3 (pueden repetirse)
-    if (idZona.startsWith('NA2')) {
-      return numeroAColocar >= 1 && numeroAColocar <= 3;
+    // REGLA NARANJA (NA): El rango (1-3 o 4-6) se define por el primer número colocado
+    if (idZona.startsWith('NA')) {
+      if (numerosActualesEnZona.isEmpty) {
+        return true; // Si está vacía, acepta cualquier número
+      }
+      
+      // Checamos cuál fue el primer número que entró para definir el rango
+      int primerNumero = numerosActualesEnZona.first;
+      if (primerNumero <= 3) {
+        return numeroAColocar >= 1 && numeroAColocar <= 3;
+      } else {
+        return numeroAColocar >= 4 && numeroAColocar <= 6;
+      }
     }
 
     // REGLA VERDE (VE): Cualquier número es válido, se pueden repetir sin límite

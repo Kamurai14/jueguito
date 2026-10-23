@@ -104,13 +104,14 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                 borderRadius: BorderRadius.circular(16),
                 child: Ink(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.blueGrey[800], // <-- Tarjeta gris oscura (contrasta con el fondo 900)
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))],
+                    // Sombra más fuerte para que parezca que flota
+                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
                   ),
                   child: Row(
                     children: [
-                      // La imagen del mapa
+                      // La imagen del mapa (esto se queda igual)
                       ClipRRect(
                         borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
                         child: Image.asset(
@@ -118,12 +119,11 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                           width: 120,
                           height: 120,
                           fit: BoxFit.cover,
-                          // Si no tienes las imágenes en tu proyecto aún, mostramos un comodín gris:
                           errorBuilder: (context, error, stackTrace) => Container(
                             width: 120,
                             height: 120,
-                            color: Colors.grey[200],
-                            child: const Icon(Icons.map, size: 40, color: Colors.grey),
+                            color: Colors.blueGrey[700], // <-- Comodín oscuro
+                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
                           ),
                         ),
                       ),
@@ -135,17 +135,19 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                           children: [
                             Text(
                               mapa.titulo,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                              // <-- Título en blanco para que resalte
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               mapa.descripcion,
-                              style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                              // <-- Descripción en un blanco opaco
+                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right, color: Colors.grey, size: 32),
+                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
                       const SizedBox(width: 12),
                     ],
                   ),
