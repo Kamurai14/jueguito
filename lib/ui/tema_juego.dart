@@ -8,6 +8,12 @@ class TemaJuego {
     if (idZona.startsWith('MO')) return Colors.purple[400]!;
     if (idZona.startsWith('RO')) return Colors.red[400]!;
     
-    return Colors.grey[400]!; 
+    // ==========================================
+    // LOS NUEVOS COLORES PARA LOS MAPAS 2, 3 Y 4
+    // ==========================================
+    if (idZona.startsWith('NA')) return Colors.orange[400]!; // Naranja
+    if (idZona.startsWith('BL')) return Colors.white;        // Blanco
+    
+    return Colors.grey[400]!; // Color por defecto si algo falla
   }
 }

@@ -13,7 +13,8 @@ void main() {
     late CapaZonas capaPrueba;
 
     setUp(() {
-      capaPrueba = CapaZonas();
+      // FIX 1: Le decimos al test que use el Mapa 1 por defecto
+      capaPrueba = CapaZonas(TipoMapa.mapa1);
       tableroPrueba = Tablero(capaPrueba);
     });
 
@@ -26,7 +27,7 @@ void main() {
         dado1: 0, 
         dado2: 0, 
         puntuacion: 0,
-        zonasCompletadas: {},
+        zonasCompletadas: const {},
         idTirada: 1,
       ),
       act: (bloc) => bloc.add(PasarTurno()),
@@ -47,18 +48,16 @@ void main() {
         dado2: 2,
         anclaSeleccionada: 4, 
         puntuacion: 10, 
-        zonasCompletadas: {},
+        zonasCompletadas: const {},
         idTirada: 1,
       ),
       act: (bloc) {
-        // IMPORTANTE: Asegúrate de que poner un 2 en la coordenada (0, 0) 
-        // sea una jugada VÁLIDA según las reglas reales de tu tablero inicial.
         bloc.add(ColocarJugada(0, 0, 2));
       },
       expect: () => [
         isA<JuegoEnProgreso>()
             .having((s) => s.puntuacion, 'puntuacion se mantiene igual', 10)
-            .having((s) => s.idTirada, 'el turno avanza', 2), // El idTirada debe subir a 2
+            .having((s) => s.idTirada, 'el turno avanza', 2), 
       ],
     );
 
@@ -72,18 +71,13 @@ void main() {
         dado2: 1,
         anclaSeleccionada: 3,
         puntuacion: 20,
-        zonasCompletadas: {}, 
-        idTirada: 2, // Turno actual
+        zonasCompletadas: const {}, 
+        idTirada: 2, 
       ),
       act: (bloc) {
-        // 1. Trucamos el tablero llenando la casilla (0,0) con un 5 para que esté ocupada
         tableroPrueba.obtenerCasilla(0, 0).valor = 5; 
-        
-        // 2. Disparamos el evento intentando poner un 1 en esa misma casilla
         bloc.add(ColocarJugada(0, 0, 1)); 
       },
-      // Cuando un evento es rechazado por la lógica (como un movimiento inválido), 
-      // el BLoC no emite ningún estado nuevo. Esperamos una lista vacía [].
       expect: () => [], 
     );
 
@@ -92,7 +86,6 @@ void main() {
       build: () => JuegoBloc(tableroPrueba),
       seed: () => JuegoEsperandoIniciales(tableroPrueba, numerosColocados: 5),
       act: (bloc) {
-        // 1. Llenamos 5 casillas iniciales "a mano" en el tablero
         int llenadas = 0;
         for (int x = 0; x < Tablero.tamano; x++) {
           for (int y = 0; y < Tablero.tamano; y++) {
@@ -104,7 +97,6 @@ void main() {
           }
         }
         
-        // 2. Buscamos la 6ta casilla (la única vacía que queda) y lanzamos el evento
         for (int x = 0; x < Tablero.tamano; x++) {
           for (int y = 0; y < Tablero.tamano; y++) {
             final c = tableroPrueba.obtenerCasilla(x, y);
@@ -118,15 +110,14 @@ void main() {
       expect: () => [isA<JuegoActivo>()],
     );
 
-  test('esColocacionValida devuelve false si la regla de la zona no permite el número', () {
-      // 1. Busca una casilla y pon un número que sepas que restringirá la zona
-      // (ej. si la zona no permite repetidos, pon un 4)
+    test('esColocacionValida devuelve false si la regla de la zona no permite el número', () {
+      // 1. Ponemos un 4 en la coordenada (1,1)
       tableroPrueba.intentarColocarNumero(1, 1, 4); 
       
-      // 2. Intenta poner otro 4 en la misma zona pero en diferente casilla
+      // 2. Intentamos poner otro 4 en la misma zona
       bool esValida = tableroPrueba.esColocacionValida(1, 2, 4); 
       
-      // 3. Verificamos que tu CapaZonas haga bien su trabajo y lo rechace
+      // 3. ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA! Le decimos al test que verifique el resultado
       expect(esValida, isFalse);
     });
 
@@ -134,21 +125,20 @@ void main() {
       'Completar la última casilla de una zona otorga los puntos correspondientes',
       build: () => JuegoBloc(tableroPrueba),
       seed: () => JuegoEnProgreso(
-        tableroPrueba, dado1: 5, dado2: 2, anclaSeleccionada: 5, puntuacion: 0, zonasCompletadas: {}, idTirada: 1,
+        tableroPrueba, dado1: 5, dado2: 2, anclaSeleccionada: 5, puntuacion: 0, zonasCompletadas: const {}, idTirada: 1,
       ),
       setUp: () {
-        // 1. Encontramos a qué zona pertenece la casilla (0,0)
-        String idZona = tableroPrueba.obtenerZonaDeCasilla(0, 0).id;
+        // FIX 2: Usamos el método correcto que devuelve el String directamente
+        String idZona = tableroPrueba.obtenerIdZonaDeCasilla(0, 0);
         
-        // 2. Llenamos TODAS las casillas de esa zona en el tablero
         for (int x = 0; x < Tablero.tamano; x++) {
           for (int y = 0; y < Tablero.tamano; y++) {
-            if (tableroPrueba.obtenerZonaDeCasilla(x, y).id == idZona) {
+            // FIX 3: Comparamos usando el método actualizado
+            if (tableroPrueba.obtenerIdZonaDeCasilla(x, y) == idZona) {
               tableroPrueba.obtenerCasilla(x, y).valor = 1; 
             }
           }
         }
-        // 3. Vaciamos ÚNICAMENTE la (0,0) para que nuestra jugada sea la que cierre la zona
         tableroPrueba.obtenerCasilla(0, 0).valor = null;
       },
       act: (bloc) {
@@ -165,7 +155,6 @@ void main() {
       'QuitarValorInicial regresa el estado a JuegoEsperandoIniciales si los números bajan de 6',
       build: () => JuegoBloc(tableroPrueba),
       setUp: () {
-        // Pre-llenamos 6 casillas iniciales en el tablero para simular que está listo
         int llenadas = 0;
         for (int x = 0; x < Tablero.tamano; x++) {
           for (int y = 0; y < Tablero.tamano; y++) {
@@ -177,10 +166,8 @@ void main() {
           }
         }
       },
-      // Hacemos que el bloc inicie creyendo que el juego ya está activo (botón verde encendido)
       seed: () => JuegoActivo(tableroPrueba),
       act: (bloc) {
-        // Buscamos la primera casilla inicial ocupada y le disparamos el evento de quitar
         for (int x = 0; x < Tablero.tamano; x++) {
           for (int y = 0; y < Tablero.tamano; y++) {
             final c = tableroPrueba.obtenerCasilla(x, y);
@@ -192,7 +179,6 @@ void main() {
         }
       },
       expect: () => [
-        // Debe regresar al estado de espera con exactamente 5 números colocados
         isA<JuegoEsperandoIniciales>()
             .having((s) => s.numerosColocados, 'contador baja a 5', 5),
       ],
@@ -205,15 +191,13 @@ void main() {
         tableroPrueba,
         dado1: 4,
         dado2: 2,
-        anclaSeleccionada: null, // Inicia sin selección
+        anclaSeleccionada: null, 
         numeroAColocar: null,
         puntuacion: 10,
-        zonasCompletadas: {},
+        zonasCompletadas: const {},
         idTirada: 3, 
       ),
       act: (bloc) {
-        // El jugador elige el dado 1 (valor 4) como ancla, 
-        // lo que significa que el dado 2 (valor 2) es el que va a colocar
         bloc.add(SeleccionarAncla(4, 2));
       },
       expect: () => [

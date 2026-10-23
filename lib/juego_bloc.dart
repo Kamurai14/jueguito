@@ -7,10 +7,8 @@ import 'dart:math';
 import 'package:jueguito/motor_reglas.dart';
 
 class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
-  // 1. AÑADIMOS EL GENERADOR ALEATORIO
   final Random _random;
 
-  // 2. MODIFICAMOS EL CONSTRUCTOR PARA ACEPTAR EL GENERADOR COMO PARÁMETRO OPCIONAL
   JuegoBloc(Tablero tablero, {Random? generadorRandom}) 
       : _random = generadorRandom ?? Random(), 
         super(JuegoEsperandoIniciales(tablero, numerosColocados: 0)) {
@@ -67,15 +65,12 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
   }
 
-  // --- HELPER AUTOMATIZADO ---
   JuegoEnProgreso _generarNuevoTurno(
     Tablero tablero, 
     int puntuacionActual, 
     Set<String> zonasCompletadas,
     {String? mensajeAlerta}
   ) {
-    
-    // 3. ¡EL CAMBIO MAESTRO! Usamos _random en lugar de crear un Random() nuevo.
     final rand = _random; 
     
     final siguienteId = (state is JuegoEnProgreso) 
@@ -93,7 +88,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     );
   }
 
-  // --- EVENTOS ---
   void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
     emit(_generarNuevoTurno(state.tablero, 0, {})); 
   }
@@ -120,7 +114,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       bool colocado = actual.tablero.intentarColocarNumero(event.x, event.y, event.numero);
       
       if (colocado) {
-        String idZona = actual.tablero.obtenerZonaDeCasilla(event.x, event.y).id;
+        
+        String idZona = actual.tablero.obtenerIdZonaDeCasilla(event.x, event.y);
         
         int nuevaPuntuacion = actual.puntuacion;
         Set<String> nuevasZonas = Set.from(actual.zonasCompletadas);

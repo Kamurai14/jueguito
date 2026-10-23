@@ -1,28 +1,18 @@
 import 'package:jueguito/casilla.dart';
 import 'package:jueguito/capa_zonas.dart';
-import 'package:jueguito/region.dart';
+import 'package:jueguito/motor_reglas.dart'; 
 
 class Tablero {
   static const int tamano = 7;
   late List<List<Casilla>> _cuadricula;
   final CapaZonas capa; 
   
-
   Tablero(this.capa) {
     _construirTableroEnBlanco();
   }
 
   void _construirTableroEnBlanco() {
     _cuadricula = [];
-    
-    List<Coordenada> coordenadasIniciales = [
-      Coordenada(2, 6), // Fila de arriba, casilla azul
-      Coordenada(5, 5), // Fila abajo, segunda morada
-      Coordenada(1, 3), // Dos filas abajo, casilla roja
-      Coordenada(4, 3), // Misma fila, primera verde de las 3
-      Coordenada(2, 1), // Dos filas abajo, casilla morada
-      Coordenada(4, 0)  // Fila de hasta abajo, segunda roja
-    ];
 
     for (int filaMatriz = 0; filaMatriz < tamano; filaMatriz++) {
       List<Casilla> filaCasillas = [];
@@ -30,9 +20,8 @@ class Tablero {
         int cartesianoX = colMatriz;
         int cartesianoY = (tamano - 1) - filaMatriz;
         
-        bool esEspecial = coordenadasIniciales.any(
-          (c) => c.x == cartesianoX && c.y == cartesianoY
-        );
+        // El tablero se construye solo con los asteriscos de CapaZonas
+        bool esEspecial = capa.esCasillaInicial(cartesianoX, cartesianoY);
         
         filaCasillas.add(
           Casilla(
@@ -53,9 +42,9 @@ class Tablero {
     return _cuadricula[matrizY][x];
   }
 
-  ZonaJuego obtenerZonaDeCasilla(int x, int y) {
-    Casilla casilla = obtenerCasilla(x, y);
-    return capa.obtenerZonaEn(casilla.coordenada);
+  // Ahora devuelve directamente el String de la zona (ej. 'AM', 'BL')
+  String obtenerIdZonaDeCasilla(int x, int y) {
+    return capa.obtenerIdZona(x, y);
   }
 
   List<int> obtenerNumerosEnZona(String idZona, {Coordenada? excluir}) {
@@ -65,11 +54,10 @@ class Tablero {
       for (int col = 0; col < tamano; col++) {
         Casilla casilla = _cuadricula[fila][col];
         
-        // Si la casilla no está vacía y no es la que queremos excluir
         if (!casilla.estaVacia && casilla.coordenada != excluir) {
-          ZonaJuego zona = capa.obtenerZonaEn(casilla.coordenada);
+          String zonaActual = capa.obtenerIdZona(casilla.coordenada.x, casilla.coordenada.y);
           
-          if (zona.id == idZona) {
+          if (zonaActual == idZona) {
             numerosActuales.add(casilla.valor!);
           }
         }
@@ -83,11 +71,12 @@ class Tablero {
     if (!casillaTarget.estaVacia) {
       return false; 
     }
-    ZonaJuego zonaTarget = capa.obtenerZonaEn(casillaTarget.coordenada);
+    
+    String idZonaTarget = capa.obtenerIdZona(x, y);
+    List<int> actuales = obtenerNumerosEnZona(idZonaTarget, excluir: casillaTarget.coordenada);
 
-    List<int> actuales = obtenerNumerosEnZona(zonaTarget.id, excluir: casillaTarget.coordenada);
-
-    bool esValido = zonaTarget.tipo.esPosibleAgregar(actuales, numero);
+    // Conectado con el nuevo Motor de Reglas
+    bool esValido = MotorReglas.esJugadaValida(idZonaTarget, numero, actuales);
 
     if (esValido) {
       casillaTarget.valor = numero;
@@ -98,23 +87,21 @@ class Tablero {
   }
 
   bool esValidoParaInicial(int numero) {
-    if (numero < 1 || numero > 6) return false; // Solo números del 1 al 6
+    if (numero < 1 || numero > 6) return false; 
 
-    // Revisamos todas las casillas para ver si ya se usó este número en otra casilla inicial
     for (int fila = 0; fila < tamano; fila++) {
       for (int col = 0; col < tamano; col++) {
         Casilla casilla = _cuadricula[fila][col];
         if (casilla.esInicial && casilla.valor == numero) {
-          return false; // El número ya está puesto en otra casilla especial
+          return false; 
         }
       }
     }
-    return true; // El número es válido y no se ha repetido
+    return true; 
   }
 
-  // Busca la casilla inicial que ya tiene un número específico
   Casilla? buscarCasillaInicialConValor(int numero) {
-    int tamanoActual = _cuadricula.length; // Tomamos el tamaño real dinámicamente
+    int tamanoActual = _cuadricula.length; 
 
     for (int fila = 0; fila < tamanoActual; fila++) {
       for (int col = 0; col < tamanoActual; col++) {
@@ -127,10 +114,9 @@ class Tablero {
     return null; 
   }
 
-  // Cuenta dinámicamente cuántas casillas iniciales ya están llenas
   int contarNumerosIniciales() {
     int contador = 0;
-    int tamanoActual = _cuadricula.length; // Tomamos el tamaño real dinámicamente
+    int tamanoActual = _cuadricula.length; 
 
     for (int fila = 0; fila < tamanoActual; fila++) {
       for (int col = 0; col < tamanoActual; col++) {
@@ -142,7 +128,6 @@ class Tablero {
     return contador;
   }
 
-  // 1. Revisa si en cruz (arriba, abajo, izq, der) existe el número que elegimos como ancla
   bool esAdyacenteAValor(int x, int y, int valorBuscado) {
     final adyacentes = [
       Coordenada(x + 1, y), Coordenada(x - 1, y),
@@ -157,29 +142,26 @@ class Tablero {
     return false;
   }
 
-  // 2. Simulador: Solo nos dice si la jugada es válida según tu CapaZonas, sin modificar el tablero
   bool esColocacionValida(int x, int y, int numero) {
     Casilla casillaTarget = obtenerCasilla(x, y);
-    ZonaJuego zonaTarget = capa.obtenerZonaEn(casillaTarget.coordenada);
-    List<int> actuales = obtenerNumerosEnZona(zonaTarget.id, excluir: casillaTarget.coordenada);
-    return zonaTarget.tipo.esPosibleAgregar(actuales, numero);
+    String idZonaTarget = capa.obtenerIdZona(x, y);
+    List<int> actuales = obtenerNumerosEnZona(idZonaTarget, excluir: casillaTarget.coordenada);
+    
+    // Conectado con el nuevo Motor de Reglas
+    return MotorReglas.esJugadaValida(idZonaTarget, numero, actuales);
   }
 
-  // Revisa si todas las casillas de una zona específica ya tienen número
   bool estaZonaLlena(String idZona) {
     for (int fila = 0; fila < tamano; fila++) {
       for (int col = 0; col < tamano; col++) {
         Casilla casilla = _cuadricula[fila][col];
-        ZonaJuego zona = capa.obtenerZonaEn(casilla.coordenada);
-        // Si pertenece a la zona y está vacía, entonces no está llena
-        if (zona.id == idZona && casilla.estaVacia) {
+        String zonaActual = capa.obtenerIdZona(casilla.coordenada.x, casilla.coordenada.y);
+        
+        if (zonaActual == idZona && casilla.estaVacia) {
           return false; 
         }
       }
     }
-    return true; // No encontramos ninguna vacía, ¡está llena!
+    return true; 
   }
-
 }
-
-

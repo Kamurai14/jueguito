@@ -27,9 +27,11 @@ void main() {
     late JuegoBloc blocReal;
 
     setUp(() {
-      // INYECCIÓN LETAL: Le pasamos el generador trucado para que los 
-      // dados SIEMPRE caigan en 1 y 1. La partida será súper rápida.
-      blocReal = JuegoBloc(Tablero(CapaZonas()), generadorRandom: DadoTrucado());
+      // Le agregamos TipoMapa.mapa1 a CapaZonas
+      blocReal = JuegoBloc(
+        Tablero(CapaZonas(TipoMapa.mapa1)), 
+        generadorRandom: DadoTrucado()
+      );
     });
 
     tearDown(() {

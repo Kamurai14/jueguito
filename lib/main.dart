@@ -6,7 +6,8 @@ import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
 
 void main() {
-  CapaZonas nivel1 = CapaZonas();
+  // Le pasamos TipoMapa.mapa1 para que sepa qué tablero dibujar al abrir la app
+  CapaZonas nivel1 = CapaZonas(TipoMapa.mapa1);
   Tablero tableroInicial = Tablero(nivel1);
 
   runApp(MiJuegoApp(tablero: tableroInicial));

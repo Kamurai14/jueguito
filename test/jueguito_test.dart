@@ -9,7 +9,7 @@ void main() {
     late Tablero tablero;
 
     setUp(() {
-      capa = CapaZonas();
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
       tablero = Tablero(capa);
     });
 
@@ -36,45 +36,46 @@ void main() {
     late Tablero tablero;
 
     setUp(() {
-      capa = CapaZonas();
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
       tablero = Tablero(capa);
     });
 
+    // FIX: Actualizamos todos los llamados a obtenerIdZonaDeCasilla
     test('Las 4 esquinas y el centro deben ser zona Amarilla (AM)', () {
-      expect(tablero.obtenerZonaDeCasilla(0, 0).id, 'AM'); // Abajo izquierda
-      expect(tablero.obtenerZonaDeCasilla(6, 0).id, 'AM'); // Abajo derecha
-      expect(tablero.obtenerZonaDeCasilla(0, 6).id, 'AM'); // Arriba izquierda
-      expect(tablero.obtenerZonaDeCasilla(6, 6).id, 'AM'); // Arriba derecha
-      expect(tablero.obtenerZonaDeCasilla(3, 3).id, 'AM'); // Centro exacto
+      expect(tablero.obtenerIdZonaDeCasilla(0, 0), 'AM'); // Abajo izquierda
+      expect(tablero.obtenerIdZonaDeCasilla(6, 0), 'AM'); // Abajo derecha
+      expect(tablero.obtenerIdZonaDeCasilla(0, 6), 'AM'); // Arriba izquierda
+      expect(tablero.obtenerIdZonaDeCasilla(6, 6), 'AM'); // Arriba derecha
+      expect(tablero.obtenerIdZonaDeCasilla(3, 3), 'AM'); // Centro exacto
     });
 
     test('Verificar distribución en el cuadrante superior (Y=5 y Y=6)', () {
-      expect(tablero.obtenerZonaDeCasilla(1, 6).id, 'VE1'); // x=1, y=6
-      expect(tablero.obtenerZonaDeCasilla(3, 6).id, 'MO1'); // x=3, y=6
-      expect(tablero.obtenerZonaDeCasilla(2, 5).id, 'AZ1'); // x=2, y=5
-      expect(tablero.obtenerZonaDeCasilla(6, 5).id, 'VE2'); // x=6, y=5
+      expect(tablero.obtenerIdZonaDeCasilla(1, 6), 'VE1'); // x=1, y=6
+      expect(tablero.obtenerIdZonaDeCasilla(3, 6), 'MO1'); // x=3, y=6
+      expect(tablero.obtenerIdZonaDeCasilla(2, 5), 'AZ1'); // x=2, y=5
+      expect(tablero.obtenerIdZonaDeCasilla(6, 5), 'VE2'); // x=6, y=5
     });
 
     test('Verificar distribución en el centro (Y=3 y Y=4)', () {
-      expect(tablero.obtenerZonaDeCasilla(0, 4).id, 'VE1'); // x=0, y=4
-      expect(tablero.obtenerZonaDeCasilla(1, 4).id, 'RO1'); // x=1, y=4
-      expect(tablero.obtenerZonaDeCasilla(2, 3).id, 'MO2'); // x=2, y=3
-      expect(tablero.obtenerZonaDeCasilla(4, 3).id, 'VE2'); // x=4, y=3
+      expect(tablero.obtenerIdZonaDeCasilla(0, 4), 'VE1'); // x=0, y=4
+      expect(tablero.obtenerIdZonaDeCasilla(1, 4), 'RO1'); // x=1, y=4
+      expect(tablero.obtenerIdZonaDeCasilla(2, 3), 'MO2'); // x=2, y=3
+      expect(tablero.obtenerIdZonaDeCasilla(4, 3), 'VE2'); // x=4, y=3
     });
 
     test('Verificar distribución en el cuadrante inferior (Y=0 y Y=1)', () {
-      expect(tablero.obtenerZonaDeCasilla(1, 0).id, 'MO2'); // x=1, y=0
-      expect(tablero.obtenerZonaDeCasilla(3, 0).id, 'RO2'); // x=3, y=0
-      expect(tablero.obtenerZonaDeCasilla(1, 1).id, 'RO1'); // x=1, y=1
-      expect(tablero.obtenerZonaDeCasilla(5, 1).id, 'AZ2'); // x=5, y=1
+      expect(tablero.obtenerIdZonaDeCasilla(1, 0), 'MO2'); // x=1, y=0
+      expect(tablero.obtenerIdZonaDeCasilla(3, 0), 'RO2'); // x=3, y=0
+      expect(tablero.obtenerIdZonaDeCasilla(1, 1), 'RO1'); // x=1, y=1
+      expect(tablero.obtenerIdZonaDeCasilla(5, 1), 'AZ2'); // x=5, y=1
     });
 
-    test('Las zonas en memoria deben ser las mismas instancias', () {
-      final zona1 = tablero.obtenerZonaDeCasilla(0, 0); // AM
-      final zona2 = tablero.obtenerZonaDeCasilla(3, 3); // AM
+    test('Las zonas en memoria se comparan correctamente por su ID de texto', () {
+      final zona1 = tablero.obtenerIdZonaDeCasilla(0, 0); // AM
+      final zona2 = tablero.obtenerIdZonaDeCasilla(3, 3); // AM
       
-      // Ambas casillas apuntan a la misma regla en memoria
-      expect(identical(zona1, zona2), isTrue);
+      // Como ahora son Strings directos, se comparan así:
+      expect(zona1 == zona2, isTrue);
     });
   });
 
@@ -83,7 +84,7 @@ void main() {
     late Tablero tablero;
 
     setUp(() {
-      capa = CapaZonas();
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
       tablero = Tablero(capa);
     });
 
@@ -131,15 +132,15 @@ void main() {
       expect(tablero.intentarColocarNumero(4, 5, 1), isTrue, reason: 'Sí permite repetir uno de los ya existentes (1)');
     });
     
-    test('Sobreescribir un número en la misma casilla se valida contra el resto de la zona', () {
+    test('Sobreescribir un número en la misma casilla se valida y falla correctamente', () {
       // (1,4) y (2,4) son RO1
       tablero.intentarColocarNumero(1, 4, 3);
       tablero.intentarColocarNumero(2, 4, 4);
       
-      // Intento cambiar el 3 por un 4 (debería fallar porque ya hay un 4 en la zona)
+      // Intento cambiar el 3 por un 4 (debería fallar porque ya hay un 4 en la zona y la casilla NO ESTÁ VACÍA)
       expect(tablero.intentarColocarNumero(1, 4, 4), isFalse);
       
-      // Intento cambiar el 3 por un 5 (debería tener éxito)
+      // Intento cambiar el 3 por un 5 (falla igual porque la casilla YA TIENE NÚMERO y no se puede sobreescribir así)
       expect(tablero.intentarColocarNumero(1, 4, 5), isFalse);
       expect(tablero.obtenerCasilla(1, 4).valor, 3);
     });
@@ -150,7 +151,7 @@ void main() {
     late Tablero tablero;
 
     setUp(() {
-      capa = CapaZonas();
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
       tablero = Tablero(capa);
     });
 

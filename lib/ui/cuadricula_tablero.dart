@@ -99,9 +99,12 @@ class CuadriculaTablero extends StatelessWidget {
                     ];
                   }
 
+                  // =========================================================
+                  // FIX AQUÍ: Obtenemos el String del ID directamente del tablero
+                  // =========================================================
                   return Container(
                     decoration: BoxDecoration(
-                      color: TemaJuego.obtenerColorZona(state.tablero.capa.obtenerZonaEn(casilla.coordenada).id),
+                      color: TemaJuego.obtenerColorZona(state.tablero.obtenerIdZonaDeCasilla(x, y)),
                       border: Border.all(color: colorBorde, width: anchoBorde),
                       boxShadow: sombras,
                     ),

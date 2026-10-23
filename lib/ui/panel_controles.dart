@@ -6,6 +6,7 @@ import 'package:jueguito/juego_state.dart';
 import 'dart:math';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 class PanelControles extends StatelessWidget {
   final JuegoState state;
@@ -100,20 +101,27 @@ class _DadoBoton extends StatefulWidget {
 
 class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  AudioPlayer? _audioPlayer; // 1. Lo hacemos opcional (nullable)
+  AudioPlayer? _audioPlayer; 
 
-  // 2. Detectamos si la app está siendo ejecutada por un test automatizado
-  final bool esTest = Platform.environment.containsKey('FLUTTER_TEST');
+  // Variable para detectar los test sin romper la versión Web
+  bool esTest = false; 
 
   @override
   void initState() {
     super.initState();
+    
+    // Protegemos la verificación: Si estamos en Web, ignoramos el Platform.environment
+    try {
+      esTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+    } catch (e) {
+      esTest = false;
+    }
+
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
 
-    // 3. Solo creamos el motor de audio en la vida real
     if (!esTest) {
       _audioPlayer = AudioPlayer();
     }
@@ -132,7 +140,6 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   }
 
   void _reproducirSonido() async {
-    // 4. Si es un test, abortamos inmediatamente y no hacemos ruido
     if (esTest || _audioPlayer == null) return; 
     
     try {
@@ -145,7 +152,7 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   @override
   void dispose() {
     _animController.dispose();
-    _audioPlayer?.dispose(); // El signo de interrogación evita que truene si es nulo
+    _audioPlayer?.dispose(); 
     super.dispose();
   }
 
@@ -156,12 +163,10 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
       child: AnimatedBuilder(
         animation: _animController,
         builder: (context, child) {
-          // Hacemos que el dado dé dos vueltas completas (2 * pi * 2)
           double angulo = _animController.value * 2 * pi * 2;
           
           return Transform(
             alignment: Alignment.center,
-            // rotateZ lo hace girar, rotateX le da el efecto de "voltereta" 3D
             transform: Matrix4.identity()..rotateZ(angulo)..rotateX(angulo / 2),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
@@ -175,7 +180,6 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
               ),
               child: Center(
                 child: Text(
-                  // Un toque genial: Mientras se anima (rueda), ocultamos el número y ponemos un "?"
                   _animController.isAnimating ? '?' : widget.valor.toString(), 
                   style: TextStyle(
                     fontSize: 24, 
