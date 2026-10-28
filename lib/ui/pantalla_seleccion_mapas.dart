@@ -4,7 +4,6 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
-import 'package:jueguito/servicios/servicio_auth.dart';
 
 class DatosMapa {
   final String titulo;
@@ -41,7 +40,6 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
     // Iniciamos la animación en cuanto carga la pantalla
     _animController.forward();
-    ServicioAuth().probarConexion();
   }
 
   @override

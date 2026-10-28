@@ -2,28 +2,47 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ServicioAuth {
-  // ATENCIÓN: Si pruebas en Web o Windows usa 'localhost'. 
-  // Si pruebas en un emulador de Android, usa '10.0.2.2' en lugar de 'localhost'.
   final String _baseUrl = 'http://localhost:8080';
 
-  Future<void> probarConexion() async {
+  // 1. Función para registrar usuario
+  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
     try {
-      print('Intentando conectar con el servidor...');
-      final url = Uri.parse('$_baseUrl/login');
+      final url = Uri.parse('$_baseUrl/registro');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      );
       
-      // Hacemos la petición POST a nuestra ruta de prueba
-      final respuesta = await http.post(url);
-
+      final datos = jsonDecode(respuesta.body);
+      
       if (respuesta.statusCode == 200) {
-        final datos = jsonDecode(respuesta.body);
-        print('✅ ¡Conexión exitosa!');
-        print('Mensaje: ${datos['mensaje']}');
-        print('Token JWT: ${datos['token']}');
+        return {'exito': true, 'mensaje': datos['mensaje']};
       } else {
-        print('❌ Error del servidor: Código ${respuesta.statusCode}');
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
       }
     } catch (e) {
-      print('❌ Error de conexión: ¿El servidor está corriendo? Detalles: $e');
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  // 2. Función para iniciar sesión
+  Future<Map<String, dynamic>> login(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/login');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        return {'exito': true, 'token': datos['token']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
     }
   }
 }

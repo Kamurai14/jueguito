@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
 
 void main() {
   runApp(const MiJuegoApp());
@@ -15,8 +15,7 @@ class MiJuegoApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      // Arrancamos directamente en el menú de mapas
-      home: const PantallaSeleccionMapas(), 
+      home: const PantallaLogin(),
     );
   }
 }
