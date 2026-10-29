@@ -152,9 +152,13 @@ lib/
     cuadricula_tablero.dart
     dialogo_selector.dart
     panel_controles.dart
+    pantalla_carga.dart
+    pantalla_login.dart
     pantalla_seleccion_mapas.dart
     pantalla_tablero.dart
     tema_juego.dart
+  utils/
+    validador_auth.dart
   capa_zonas.dart
   casilla.dart
   juego_bloc.dart
@@ -225,6 +229,7 @@ test/
   camino_feliz_test.dart
   juego_bloc_test.dart
   jueguito_test.dart
+  validador_auth_test.dart
 web/
   icons/
     Icon-192.png
@@ -1760,34 +1765,95 @@ Runner/GeneratedPluginRegistrant.*
 !default.perspectivev3
 </file>
 
-<file path="lib/servicios/servicio_auth.dart">
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+<file path="lib/ui/pantalla_carga.dart">
+import 'package:flutter/material.dart';
+import 'package:jueguito/servicios/servicio_auth.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
+import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 
-class ServicioAuth {
-  // ATENCIÓN: Si pruebas en Web o Windows usa 'localhost'. 
-  // Si pruebas en un emulador de Android, usa '10.0.2.2' en lugar de 'localhost'.
-  final String _baseUrl = 'http://localhost:8080';
+class PantallaCarga extends StatefulWidget {
+  const PantallaCarga({super.key});
 
-  Future<void> probarConexion() async {
-    try {
-      print('Intentando conectar con el servidor...');
-      final url = Uri.parse('$_baseUrl/login');
-      
-      // Hacemos la petición POST a nuestra ruta de prueba
-      final respuesta = await http.post(url);
+  @override
+  State<PantallaCarga> createState() => _PantallaCargaState();
+}
 
-      if (respuesta.statusCode == 200) {
-        final datos = jsonDecode(respuesta.body);
-        print('✅ ¡Conexión exitosa!');
-        print('Mensaje: ${datos['mensaje']}');
-        print('Token JWT: ${datos['token']}');
-      } else {
-        print('❌ Error del servidor: Código ${respuesta.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Error de conexión: ¿El servidor está corriendo? Detalles: $e');
+class _PantallaCargaState extends State<PantallaCarga> {
+  @override
+  void initState() {
+    super.initState();
+    _verificarSesion();
+  }
+
+  void _verificarSesion() async {
+    // Le damos un pequeño delay solo para que la animación de carga se vea fluida
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    final tieneSesion = await ServicioAuth().tieneSesionActiva();
+
+    if (!mounted) return;
+
+    if (tieneSesion) {
+      // Si ya hay token, va directo a los mapas
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
+      );
+    } else {
+      // Si no hay token, lo mandamos al Login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PantallaLogin()),
+      );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Usamos el mismo color "cremita" de la caja del juego
+    return const Scaffold(
+      backgroundColor: Color(0xFFF8F5EE),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'BRILLIANT',
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFFF6B00), // Naranja Brilliant
+                letterSpacing: 2,
+              ),
+            ),
+            SizedBox(height: 30),
+            CircularProgressIndicator(color: Color(0xFFE30059)), // Rosa Brilliant
+          ],
+        ),
+      ),
+    );
+  }
+}
+</file>
+
+<file path="lib/utils/validador_auth.dart">
+class ValidadorAuth {
+  static String? validarRegistro(String usuario, String password, String confirmarPassword) {
+    if (usuario.isEmpty || password.isEmpty) return 'Por favor, llena todos los campos obligatorios.';
+    
+    if (usuario.length < 3 || usuario.length > 15) {
+      return 'El usuario debe tener entre 3 y 15 caracteres.';
+    }
+    
+    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(usuario)) {
+      return 'El usuario no puede contener espacios ni símbolos especiales.';
+    }
+    
+    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.';
+    
+    if (password != confirmarPassword) return 'Las contraseñas no coinciden.';
+    
+    return null; // null significa que todo está correcto
   }
 }
 </file>
@@ -3672,6 +3738,48 @@ class RunnerTests: XCTestCase {
 **/xcuserdata/
 </file>
 
+<file path="test/validador_auth_test.dart">
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jueguito/utils/validador_auth.dart';
+
+void main() {
+  group('Pruebas de Seguridad en Registro', () {
+    test('Falla si hay campos vacíos', () {
+      expect(ValidadorAuth.validarRegistro('', '123456', '123456'), 
+          'Por favor, llena todos los campos obligatorios.');
+    });
+
+    test('Falla si el usuario tiene menos de 3 o más de 15 caracteres', () {
+      expect(ValidadorAuth.validarRegistro('ab', '123456', '123456'), 
+          'El usuario debe tener entre 3 y 15 caracteres.');
+      expect(ValidadorAuth.validarRegistro('este_usuario_es_demasiado_largo', '123456', '123456'), 
+          'El usuario debe tener entre 3 y 15 caracteres.');
+    });
+
+    test('Falla si el usuario tiene espacios o símbolos especiales', () {
+      expect(ValidadorAuth.validarRegistro('juan perez', '123456', '123456'), 
+          'El usuario no puede contener espacios ni símbolos especiales.');
+      expect(ValidadorAuth.validarRegistro('juan@', '123456', '123456'), 
+          'El usuario no puede contener espacios ni símbolos especiales.');
+    });
+
+    test('Falla si la contraseña tiene menos de 6 caracteres', () {
+      expect(ValidadorAuth.validarRegistro('juan_123', '12345', '12345'), 
+          'La contraseña debe tener al menos 6 caracteres.');
+    });
+
+    test('Falla si las contraseñas no coinciden', () {
+      expect(ValidadorAuth.validarRegistro('juan_123', '123456', '654321'), 
+          'Las contraseñas no coinciden.');
+    });
+
+    test('Pasa la validación (retorna null) con datos correctos', () {
+      expect(ValidadorAuth.validarRegistro('juan_123', '123456', '123456'), null);
+    });
+  });
+}
+</file>
+
 <file path="web/index.html">
 <!DOCTYPE html>
 <html>
@@ -4857,10 +4965,6 @@ install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   COMPONENT Runtime)
 </file>
 
-<file path=".flutter-plugins-dependencies">
-{"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"android":[{"name":"audioplayers_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_android-5.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_android-2.2.23\\\\","native_build":true,"dependencies":[],"dev_dependency":false}],"macos":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"linux":[{"name":"audioplayers_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_linux-4.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_linux-2.2.1\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"windows":[{"name":"audioplayers_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_windows-4.3.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_windows-2.3.0\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"web":[{"name":"audioplayers_web","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_web-5.2.1\\\\","dependencies":[],"dev_dependency":false}]},"dependencyGraph":[{"name":"audioplayers","dependencies":["audioplayers_android","audioplayers_darwin","audioplayers_linux","audioplayers_web","audioplayers_windows","path_provider"]},{"name":"audioplayers_android","dependencies":[]},{"name":"audioplayers_darwin","dependencies":[]},{"name":"audioplayers_linux","dependencies":[]},{"name":"audioplayers_web","dependencies":[]},{"name":"audioplayers_windows","dependencies":[]},{"name":"path_provider","dependencies":["path_provider_android","path_provider_foundation","path_provider_linux","path_provider_windows"]},{"name":"path_provider_android","dependencies":[]},{"name":"path_provider_foundation","dependencies":[]},{"name":"path_provider_linux","dependencies":[]},{"name":"path_provider_windows","dependencies":[]}],"date_created":"2026-10-08 10:20:53.169262","version":"3.35.2","swift_package_manager_enabled":{"ios":false,"macos":false}}
-</file>
-
 <file path=".gitignore">
 # https://dart.dev/guides/libraries/private-files
 # Created by `dart pub`
@@ -4977,6 +5081,204 @@ include: package:lints/recommended.yaml
 <file path="README.md">
 A sample command-line application with an entrypoint in `bin/`, library code
 in `lib/`, and example unit test in `test/`.
+</file>
+
+<file path="lib/ui/pantalla_login.dart">
+import 'package:flutter/material.dart';
+import 'package:jueguito/servicios/servicio_auth.dart';
+import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
+import 'package:jueguito/utils/validador_auth.dart';
+
+class PantallaLogin extends StatefulWidget {
+  const PantallaLogin({super.key});
+
+  @override
+  State<PantallaLogin> createState() => _PantallaLoginState();
+}
+
+class _PantallaLoginState extends State<PantallaLogin> {
+  final _controladorUsuario = TextEditingController();
+  final _controladorPassword = TextEditingController();
+  final _controladorConfirmarPassword = TextEditingController();
+  bool _estaRegistrando = false;
+  bool _cargando = false;
+
+  @override
+  void dispose() {
+    _controladorUsuario.dispose();
+    _controladorPassword.dispose();
+    _controladorConfirmarPassword.dispose();
+    super.dispose();
+  }
+
+  void _procesarFormulario() async {
+    final usuario = _controladorUsuario.text.trim();
+    final password = _controladorPassword.text.trim();
+    final confirmarPassword = _controladorConfirmarPassword.text.trim();
+
+    // 1. Usar el validador extraído
+    if (_estaRegistrando) {
+      final error = ValidadorAuth.validarRegistro(usuario, password, confirmarPassword);
+      if (error != null) {
+        _mostrarError(error);
+        return;
+      }
+    } else {
+      // Para login normal, solo checamos que no estén vacíos
+      if (usuario.isEmpty || password.isEmpty) {
+        _mostrarError('Por favor, llena todos los campos obligatorios.');
+        return;
+      }
+    }
+
+    setState(() => _cargando = true);
+    final servicio = ServicioAuth();
+    Map<String, dynamic> resultado;
+
+    // 2. Procesar Registro o Login
+    if (_estaRegistrando) {
+      resultado = await servicio.registrar(usuario, password);
+      
+      if (resultado['exito'] == true) {
+        setState(() {
+          _estaRegistrando = false;
+          _cargando = false;
+          _controladorPassword.clear();
+          _controladorConfirmarPassword.clear();
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('¡Cuenta creada! Ahora inicia sesión.'), 
+              backgroundColor: Colors.green
+            ),
+          );
+        }
+        return; 
+      }
+    } else {
+      resultado = await servicio.login(usuario, password);
+      
+      if (resultado['exito'] == true) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
+          );
+        }
+        return; 
+      }
+    }
+
+    setState(() => _cargando = false);
+    _mostrarError(resultado['mensaje']);
+  }
+
+  void _mostrarError(String mensaje) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5EE), // Crema Brilliant
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'BRILLIANT',
+                style: TextStyle(
+                  fontSize: 40, 
+                  fontWeight: FontWeight.w900, 
+                  color: Color(0xFFFF6B00) // Naranja
+                ),
+              ),
+              const SizedBox(height: 40),
+              
+              TextField(
+                controller: _controladorUsuario,
+                decoration: const InputDecoration(
+                  labelText: 'Usuario',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              TextField(
+                controller: _controladorPassword,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Animación simple para mostrar/ocultar el campo de confirmar contraseña
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: _estaRegistrando ? 70 : 0,
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: TextField(
+                    controller: _controladorConfirmarPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              _cargando 
+                ? const CircularProgressIndicator(color: Color(0xFFE30059))
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0055A4), // Azul profundo
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: _procesarFormulario,
+                    child: Text(
+                      _estaRegistrando ? 'Crear Cuenta' : 'Entrar', 
+                      style: const TextStyle(fontSize: 18)
+                    ),
+                  ),
+                  
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _estaRegistrando = !_estaRegistrando;
+                    _controladorConfirmarPassword.clear();
+                  });
+                },
+                child: Text(
+                  _estaRegistrando 
+                    ? '¿Ya tienes cuenta? Inicia sesión' 
+                    : '¿No tienes cuenta? Regístrate',
+                  style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 </file>
 
 <file path="lib/capa_zonas.dart">
@@ -5235,110 +5537,101 @@ class TipoRojo extends Tipo {
 }
 </file>
 
-<file path="linux/flutter/generated_plugin_registrant.cc">
-//
-//  Generated file. Do not edit.
-//
+<file path=".flutter-plugins-dependencies">
+{"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"android":[{"name":"audioplayers_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_android-5.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_android-2.2.23\\\\","native_build":true,"dependencies":[],"dev_dependency":false}],"macos":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_macos","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_macos-3.1.3\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"linux":[{"name":"audioplayers_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_linux-4.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_linux-1.2.3\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_linux-2.2.1\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"windows":[{"name":"audioplayers_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_windows-4.3.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_windows-3.1.2\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_windows-2.3.0\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"web":[{"name":"audioplayers_web","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_web-5.2.1\\\\","dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_web","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_web-1.2.1\\\\","dependencies":[],"dev_dependency":false}]},"dependencyGraph":[{"name":"audioplayers","dependencies":["audioplayers_android","audioplayers_darwin","audioplayers_linux","audioplayers_web","audioplayers_windows","path_provider"]},{"name":"audioplayers_android","dependencies":[]},{"name":"audioplayers_darwin","dependencies":[]},{"name":"audioplayers_linux","dependencies":[]},{"name":"audioplayers_web","dependencies":[]},{"name":"audioplayers_windows","dependencies":[]},{"name":"flutter_secure_storage","dependencies":["flutter_secure_storage_linux","flutter_secure_storage_macos","flutter_secure_storage_web","flutter_secure_storage_windows"]},{"name":"flutter_secure_storage_linux","dependencies":[]},{"name":"flutter_secure_storage_macos","dependencies":[]},{"name":"flutter_secure_storage_web","dependencies":[]},{"name":"flutter_secure_storage_windows","dependencies":["path_provider"]},{"name":"path_provider","dependencies":["path_provider_android","path_provider_foundation","path_provider_linux","path_provider_windows"]},{"name":"path_provider_android","dependencies":[]},{"name":"path_provider_foundation","dependencies":[]},{"name":"path_provider_linux","dependencies":[]},{"name":"path_provider_windows","dependencies":[]}],"date_created":"2026-10-29 10:43:58.731709","version":"3.35.2","swift_package_manager_enabled":{"ios":false,"macos":false}}
+</file>
 
-// clang-format off
+<file path="lib/servicios/servicio_auth.dart">
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-#include "generated_plugin_registrant.h"
+class ServicioAuth {
+  final String _baseUrl = 'http://localhost:8080';
+  final _almacenamientoSeguro = const FlutterSecureStorage();
 
-#include <audioplayers_linux/audioplayers_linux_plugin.h>
+  // Función para registrar usuario
+  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/registro');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        return {'exito': true, 'mensaje': datos['mensaje']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
 
-void fl_register_plugins(FlPluginRegistry* registry) {
-  g_autoptr(FlPluginRegistrar) audioplayers_linux_registrar =
-      fl_plugin_registry_get_registrar_for_plugin(registry, "AudioplayersLinuxPlugin");
-  audioplayers_linux_plugin_register_with_registrar(audioplayers_linux_registrar);
+  // Función para iniciar sesión y GUARDAR el token
+  Future<Map<String, dynamic>> login(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/login');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
+        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
+        return {'exito': true, 'token': datos['token']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  // Verifica si hay un token guardado en el teléfono
+  Future<bool> tieneSesionActiva() async {
+    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+    return token != null;
+  }
+
+  // Borra el token (Para el botón de Cerrar Sesión)
+  Future<void> cerrarSesion() async {
+    await _almacenamientoSeguro.delete(key: 'jwt_token');
+  }
+
+  // Pide al servidor borrar la cuenta usando el token de sesión
+  Future<Map<String, dynamic>> borrarCuenta() async {
+    try {
+      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+      if (token == null) return {'exito': false, 'mensaje': 'No hay sesión activa'};
+
+      final url = Uri.parse('$_baseUrl/borrar-cuenta');
+      final respuesta = await http.delete(
+        url,
+        // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      if (respuesta.statusCode == 200) {
+        await cerrarSesion(); // Si se borró en el server, borramos el token del celular
+        return {'exito': true};
+      } else {
+        final datos = jsonDecode(respuesta.body);
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error al borrar cuenta'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+  
 }
-</file>
-
-<file path="linux/flutter/generated_plugins.cmake">
-#
-# Generated file, do not edit.
-#
-
-list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_linux
-)
-
-list(APPEND FLUTTER_FFI_PLUGIN_LIST
-)
-
-set(PLUGIN_BUNDLED_LIBRARIES)
-
-foreach(plugin ${FLUTTER_PLUGIN_LIST})
-  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${plugin}/linux plugins/${plugin})
-  target_link_libraries(${BINARY_NAME} PRIVATE ${plugin}_plugin)
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${plugin}_plugin>)
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${plugin}_bundled_libraries})
-endforeach(plugin)
-
-foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
-  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/linux plugins/${ffi_plugin})
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
-endforeach(ffi_plugin)
-</file>
-
-<file path="macos/Flutter/GeneratedPluginRegistrant.swift">
-//
-//  Generated file. Do not edit.
-//
-
-import FlutterMacOS
-import Foundation
-
-import audioplayers_darwin
-import path_provider_foundation
-
-func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  AudioplayersDarwinPlugin.register(with: registry.registrar(forPlugin: "AudioplayersDarwinPlugin"))
-  PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
-}
-</file>
-
-<file path="windows/flutter/generated_plugin_registrant.cc">
-//
-//  Generated file. Do not edit.
-//
-
-// clang-format off
-
-#include "generated_plugin_registrant.h"
-
-#include <audioplayers_windows/audioplayers_windows_plugin.h>
-
-void RegisterPlugins(flutter::PluginRegistry* registry) {
-  AudioplayersWindowsPluginRegisterWithRegistrar(
-      registry->GetRegistrarForPlugin("AudioplayersWindowsPlugin"));
-}
-</file>
-
-<file path="windows/flutter/generated_plugins.cmake">
-#
-# Generated file, do not edit.
-#
-
-list(APPEND FLUTTER_PLUGIN_LIST
-  audioplayers_windows
-)
-
-list(APPEND FLUTTER_FFI_PLUGIN_LIST
-)
-
-set(PLUGIN_BUNDLED_LIBRARIES)
-
-foreach(plugin ${FLUTTER_PLUGIN_LIST})
-  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${plugin}/windows plugins/${plugin})
-  target_link_libraries(${BINARY_NAME} PRIVATE ${plugin}_plugin)
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${plugin}_plugin>)
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${plugin}_bundled_libraries})
-endforeach(plugin)
-
-foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
-  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/windows plugins/${ffi_plugin})
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
-endforeach(ffi_plugin)
 </file>
 
 <file path="lib/ui/cabecera_juego.dart">
@@ -5393,173 +5686,6 @@ class CabeceraJuego extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-</file>
-
-<file path="lib/ui/pantalla_seleccion_mapas.dart">
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jueguito/capa_zonas.dart';
-import 'package:jueguito/tablero.dart';
-import 'package:jueguito/juego_bloc.dart';
-import 'package:jueguito/ui/pantalla_tablero.dart';
-import 'package:jueguito/servicios/servicio_auth.dart';
-
-class DatosMapa {
-  final String titulo;
-  final String descripcion;
-  final TipoMapa tipo;
-  final String rutaImagen;
-
-  DatosMapa(this.titulo, this.descripcion, this.tipo, this.rutaImagen);
-}
-
-class PantallaSeleccionMapas extends StatefulWidget {
-  const PantallaSeleccionMapas({super.key});
-
-  @override
-  State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
-}
-
-class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-
-  final List<DatosMapa> _mapas = [
-    DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
-    DatosMapa('Mapa 2', 'Nivel 2', TipoMapa.mapa2, 'assets/mapas/mapa2.png'),
-    DatosMapa('Mapa 3', 'Nivel 3', TipoMapa.mapa3, 'assets/mapas/mapa3.png'),
-    DatosMapa('Mapa 4', 'Nivel 4', TipoMapa.mapa4, 'assets/mapas/mapa4.png'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    // Iniciamos la animación en cuanto carga la pantalla
-    _animController.forward();
-    ServicioAuth().probarConexion();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  void _seleccionarMapa(BuildContext context, TipoMapa tipo) {
-    // 1. Creamos el tablero con el mapa elegido
-    final tableroSeleccionado = Tablero(CapaZonas(tipo));
-    
-    // 2. Navegamos a la pantalla del juego inyectando el nuevo BLoC
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => BlocProvider(
-          create: (context) => JuegoBloc(tableroSeleccionado),
-          child: const PantallaTablero(),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // 1. Aquí cambiamos el color de fondo de toda la pantalla
-      backgroundColor: Colors.blueGrey[900], // Un tono oscuro muy elegante (puedes usar Colors.grey[900] también)
-      
-      appBar: AppBar(
-        // 2. Hacemos que la barra superior combine con el fondo oscuro
-        backgroundColor: Colors.blueGrey[900], 
-        foregroundColor: Colors.white, // Hace que el texto y los íconos del AppBar sean blancos
-        elevation: 0, // Quitamos la rayita de sombra para un look más limpio
-        title: const Text('Selecciona un Mapa', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _mapas.length,
-        itemBuilder: (context, index) {
-          final mapa = _mapas[index];
-
-          // Animación "Staggered" (en cascada). Cada elemento entra un poco más tarde que el anterior.
-          final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
-            CurvedAnimation(
-              parent: _animController,
-              curve: Interval(
-                index * 0.2, // Retraso progresivo: 0.0, 0.2, 0.4...
-                1.0,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
-          );
-
-          return SlideTransition(
-            position: animacionEntrada,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: InkWell(
-                onTap: () => _seleccionarMapa(context, mapa.tipo),
-                borderRadius: BorderRadius.circular(16),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey[800], // <-- Tarjeta gris oscura (contrasta con el fondo 900)
-                    borderRadius: BorderRadius.circular(16),
-                    // Sombra más fuerte para que parezca que flota
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
-                  ),
-                  child: Row(
-                    children: [
-                      // La imagen del mapa (esto se queda igual)
-                      ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                        child: Image.asset(
-                          mapa.rutaImagen,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 120,
-                            height: 120,
-                            color: Colors.blueGrey[700], // <-- Comodín oscuro
-                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Textos del botón
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              mapa.titulo,
-                              // <-- Título en blanco para que resalte
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              mapa.descripcion,
-                              // <-- Descripción en un blanco opaco
-                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
-                      const SizedBox(width: 12),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
       ),
     );
   }
@@ -5680,6 +5806,123 @@ class MotorReglas {
     return 0;
   }
 }
+</file>
+
+<file path="linux/flutter/generated_plugin_registrant.cc">
+//
+//  Generated file. Do not edit.
+//
+
+// clang-format off
+
+#include "generated_plugin_registrant.h"
+
+#include <audioplayers_linux/audioplayers_linux_plugin.h>
+#include <flutter_secure_storage_linux/flutter_secure_storage_linux_plugin.h>
+
+void fl_register_plugins(FlPluginRegistry* registry) {
+  g_autoptr(FlPluginRegistrar) audioplayers_linux_registrar =
+      fl_plugin_registry_get_registrar_for_plugin(registry, "AudioplayersLinuxPlugin");
+  audioplayers_linux_plugin_register_with_registrar(audioplayers_linux_registrar);
+  g_autoptr(FlPluginRegistrar) flutter_secure_storage_linux_registrar =
+      fl_plugin_registry_get_registrar_for_plugin(registry, "FlutterSecureStorageLinuxPlugin");
+  flutter_secure_storage_linux_plugin_register_with_registrar(flutter_secure_storage_linux_registrar);
+}
+</file>
+
+<file path="linux/flutter/generated_plugins.cmake">
+#
+# Generated file, do not edit.
+#
+
+list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_linux
+  flutter_secure_storage_linux
+)
+
+list(APPEND FLUTTER_FFI_PLUGIN_LIST
+)
+
+set(PLUGIN_BUNDLED_LIBRARIES)
+
+foreach(plugin ${FLUTTER_PLUGIN_LIST})
+  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${plugin}/linux plugins/${plugin})
+  target_link_libraries(${BINARY_NAME} PRIVATE ${plugin}_plugin)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${plugin}_plugin>)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${plugin}_bundled_libraries})
+endforeach(plugin)
+
+foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
+  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/linux plugins/${ffi_plugin})
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
+endforeach(ffi_plugin)
+</file>
+
+<file path="macos/Flutter/GeneratedPluginRegistrant.swift">
+//
+//  Generated file. Do not edit.
+//
+
+import FlutterMacOS
+import Foundation
+
+import audioplayers_darwin
+import flutter_secure_storage_macos
+import path_provider_foundation
+
+func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
+  AudioplayersDarwinPlugin.register(with: registry.registrar(forPlugin: "AudioplayersDarwinPlugin"))
+  FlutterSecureStoragePlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStoragePlugin"))
+  PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
+}
+</file>
+
+<file path="windows/flutter/generated_plugin_registrant.cc">
+//
+//  Generated file. Do not edit.
+//
+
+// clang-format off
+
+#include "generated_plugin_registrant.h"
+
+#include <audioplayers_windows/audioplayers_windows_plugin.h>
+#include <flutter_secure_storage_windows/flutter_secure_storage_windows_plugin.h>
+
+void RegisterPlugins(flutter::PluginRegistry* registry) {
+  AudioplayersWindowsPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("AudioplayersWindowsPlugin"));
+  FlutterSecureStorageWindowsPluginRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("FlutterSecureStorageWindowsPlugin"));
+}
+</file>
+
+<file path="windows/flutter/generated_plugins.cmake">
+#
+# Generated file, do not edit.
+#
+
+list(APPEND FLUTTER_PLUGIN_LIST
+  audioplayers_windows
+  flutter_secure_storage_windows
+)
+
+list(APPEND FLUTTER_FFI_PLUGIN_LIST
+)
+
+set(PLUGIN_BUNDLED_LIBRARIES)
+
+foreach(plugin ${FLUTTER_PLUGIN_LIST})
+  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${plugin}/windows plugins/${plugin})
+  target_link_libraries(${BINARY_NAME} PRIVATE ${plugin}_plugin)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${plugin}_plugin>)
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${plugin}_bundled_libraries})
+endforeach(plugin)
+
+foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
+  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/windows plugins/${ffi_plugin})
+  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
+endforeach(ffi_plugin)
 </file>
 
 <file path="lib/ui/cuadricula_tablero.dart">
@@ -5812,6 +6055,171 @@ class CuadriculaTablero extends StatelessWidget {
           }
         );
       },
+    );
+  }
+}
+</file>
+
+<file path="lib/ui/pantalla_seleccion_mapas.dart">
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/capa_zonas.dart';
+import 'package:jueguito/tablero.dart';
+import 'package:jueguito/juego_bloc.dart';
+import 'package:jueguito/ui/pantalla_tablero.dart';
+
+class DatosMapa {
+  final String titulo;
+  final String descripcion;
+  final TipoMapa tipo;
+  final String rutaImagen;
+
+  DatosMapa(this.titulo, this.descripcion, this.tipo, this.rutaImagen);
+}
+
+class PantallaSeleccionMapas extends StatefulWidget {
+  const PantallaSeleccionMapas({super.key});
+
+  @override
+  State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
+}
+
+class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+
+  final List<DatosMapa> _mapas = [
+    DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
+    DatosMapa('Mapa 2', 'Nivel 2', TipoMapa.mapa2, 'assets/mapas/mapa2.png'),
+    DatosMapa('Mapa 3', 'Nivel 3', TipoMapa.mapa3, 'assets/mapas/mapa3.png'),
+    DatosMapa('Mapa 4', 'Nivel 4', TipoMapa.mapa4, 'assets/mapas/mapa4.png'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    // Iniciamos la animación en cuanto carga la pantalla
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _seleccionarMapa(BuildContext context, TipoMapa tipo) {
+    // 1. Creamos el tablero con el mapa elegido
+    final tableroSeleccionado = Tablero(CapaZonas(tipo));
+    
+    // 2. Navegamos a la pantalla del juego inyectando el nuevo BLoC
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BlocProvider(
+          create: (context) => JuegoBloc(tableroSeleccionado),
+          child: const PantallaTablero(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // 1. Aquí cambiamos el color de fondo de toda la pantalla
+      backgroundColor: Colors.blueGrey[900], // Un tono oscuro muy elegante (puedes usar Colors.grey[900] también)
+      
+      appBar: AppBar(
+        // 2. Hacemos que la barra superior combine con el fondo oscuro
+        backgroundColor: Colors.blueGrey[900], 
+        foregroundColor: Colors.white, // Hace que el texto y los íconos del AppBar sean blancos
+        elevation: 0, // Quitamos la rayita de sombra para un look más limpio
+        title: const Text('Selecciona un Mapa', style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: _mapas.length,
+        itemBuilder: (context, index) {
+          final mapa = _mapas[index];
+
+          // Animación "Staggered" (en cascada). Cada elemento entra un poco más tarde que el anterior.
+          final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
+            CurvedAnimation(
+              parent: _animController,
+              curve: Interval(
+                index * 0.2, // Retraso progresivo: 0.0, 0.2, 0.4...
+                1.0,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
+          );
+
+          return SlideTransition(
+            position: animacionEntrada,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: InkWell(
+                onTap: () => _seleccionarMapa(context, mapa.tipo),
+                borderRadius: BorderRadius.circular(16),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey[800], // <-- Tarjeta gris oscura (contrasta con el fondo 900)
+                    borderRadius: BorderRadius.circular(16),
+                    // Sombra más fuerte para que parezca que flota
+                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
+                  ),
+                  child: Row(
+                    children: [
+                      // La imagen del mapa (esto se queda igual)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                        child: Image.asset(
+                          mapa.rutaImagen,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 120,
+                            height: 120,
+                            color: Colors.blueGrey[700], // <-- Comodín oscuro
+                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Textos del botón
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              mapa.titulo,
+                              // <-- Título en blanco para que resalte
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              mapa.descripcion,
+                              // <-- Descripción en un blanco opaco
+                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
+                      const SizedBox(width: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -7003,6 +7411,193 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
 }
 </file>
 
+<file path="test/jueguito_test.dart">
+import 'package:flutter_test/flutter_test.dart';
+import 'package:jueguito/casilla.dart';
+import 'package:jueguito/capa_zonas.dart';
+import 'package:jueguito/tablero.dart';
+
+void main() {
+  group('Pruebas de Tablero y Sistema de Coordenadas Cartesiano', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
+      tablero = Tablero(capa);
+    });
+
+    test('El origen (0,0) debe estar en la esquina inferior izquierda', () {
+      Casilla casilla = tablero.obtenerCasilla(0, 0);
+      expect(casilla.coordenada.x, 0);
+      expect(casilla.coordenada.y, 0);
+    });
+
+    test('La coordenada (6,6) debe estar en la esquina superior derecha', () {
+      Casilla casilla = tablero.obtenerCasilla(6, 6);
+      expect(casilla.coordenada.x, 6);
+      expect(casilla.coordenada.y, 6);
+    });
+
+    test('Fuera de límites lanza excepción', () {
+      expect(() => tablero.obtenerCasilla(7, 7), throwsException);
+      expect(() => tablero.obtenerCasilla(-1, 0), throwsException);
+    });
+  });
+
+  group('Pruebas de Capa de Zonas (Nuevo Mapa Personalizado)', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
+      tablero = Tablero(capa);
+    });
+
+    // FIX: Actualizamos todos los llamados a obtenerIdZonaDeCasilla
+    test('Las 4 esquinas y el centro deben ser zona Amarilla (AM)', () {
+      expect(tablero.obtenerIdZonaDeCasilla(0, 0), 'AM'); // Abajo izquierda
+      expect(tablero.obtenerIdZonaDeCasilla(6, 0), 'AM'); // Abajo derecha
+      expect(tablero.obtenerIdZonaDeCasilla(0, 6), 'AM'); // Arriba izquierda
+      expect(tablero.obtenerIdZonaDeCasilla(6, 6), 'AM'); // Arriba derecha
+      expect(tablero.obtenerIdZonaDeCasilla(3, 3), 'AM'); // Centro exacto
+    });
+
+    test('Verificar distribución en el cuadrante superior (Y=5 y Y=6)', () {
+      expect(tablero.obtenerIdZonaDeCasilla(1, 6), 'VE1'); // x=1, y=6
+      expect(tablero.obtenerIdZonaDeCasilla(3, 6), 'MO1'); // x=3, y=6
+      expect(tablero.obtenerIdZonaDeCasilla(2, 5), 'AZ1'); // x=2, y=5
+      expect(tablero.obtenerIdZonaDeCasilla(6, 5), 'VE2'); // x=6, y=5
+    });
+
+    test('Verificar distribución en el centro (Y=3 y Y=4)', () {
+      expect(tablero.obtenerIdZonaDeCasilla(0, 4), 'VE1'); // x=0, y=4
+      expect(tablero.obtenerIdZonaDeCasilla(1, 4), 'RO1'); // x=1, y=4
+      expect(tablero.obtenerIdZonaDeCasilla(2, 3), 'MO2'); // x=2, y=3
+      expect(tablero.obtenerIdZonaDeCasilla(4, 3), 'VE2'); // x=4, y=3
+    });
+
+    test('Verificar distribución en el cuadrante inferior (Y=0 y Y=1)', () {
+      expect(tablero.obtenerIdZonaDeCasilla(1, 0), 'MO2'); // x=1, y=0
+      expect(tablero.obtenerIdZonaDeCasilla(3, 0), 'RO2'); // x=3, y=0
+      expect(tablero.obtenerIdZonaDeCasilla(1, 1), 'RO1'); // x=1, y=1
+      expect(tablero.obtenerIdZonaDeCasilla(5, 1), 'AZ2'); // x=5, y=1
+    });
+
+    test('Las zonas en memoria se comparan correctamente por su ID de texto', () {
+      final zona1 = tablero.obtenerIdZonaDeCasilla(0, 0); // AM
+      final zona2 = tablero.obtenerIdZonaDeCasilla(3, 3); // AM
+      
+      // Como ahora son Strings directos, se comparan así:
+      expect(zona1 == zona2, isTrue);
+    });
+  });
+
+  group('Pruebas de Inserción y Reglas de Tipos', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
+      tablero = Tablero(capa);
+    });
+
+    test('Casilla estaVacia funciona correctamente', () {
+      var casilla = tablero.obtenerCasilla(0, 0);
+      expect(casilla.estaVacia, isTrue);
+      
+      tablero.intentarColocarNumero(0, 0, 5);
+      expect(casilla.estaVacia, isFalse);
+      expect(casilla.valor, 5);
+    });
+
+    test('Zona VE (Verde): Permite cualquier número repetido o distinto', () {
+      // Coordenadas (0,4) y (0,3) son VE1 en el nuevo mapa
+      expect(tablero.intentarColocarNumero(0, 4, 3), isTrue, reason: 'Debe permitir el primer número');
+      expect(tablero.intentarColocarNumero(0, 3, 3), isTrue, reason: 'Debe permitir repetir número');
+      expect(tablero.intentarColocarNumero(1, 6, 7), isTrue, reason: 'Debe permitir número distinto');
+    });
+
+    test('Zona RO (Rojo) y AM (Amarillo): Todos los números deben ser distintos', () {
+      // Coordenadas (1,4) y (1,3) son RO1
+      expect(tablero.intentarColocarNumero(1, 4, 3), isTrue);
+      expect(tablero.intentarColocarNumero(1, 3, 3), isFalse, reason: 'No debe permitir repetir el 3 en zona Roja');
+      expect(tablero.intentarColocarNumero(1, 3, 5), isTrue, reason: 'Debe permitir un número distinto (5)');
+
+      // Coordenadas (0,0) y (6,6) son AM
+      expect(tablero.intentarColocarNumero(0, 0, 9), isTrue);
+      expect(tablero.intentarColocarNumero(6, 6, 9), isFalse, reason: 'No debe permitir repetir el 9 en el borde Amarillo');
+    });
+
+    test('Zona AZ (Azul): Todos los números deben ser iguales', () {
+      // Coordenadas (2,5) y (3,5) son AZ1
+      expect(tablero.intentarColocarNumero(2, 5, 4), isTrue);
+      expect(tablero.intentarColocarNumero(3, 5, 7), isFalse, reason: 'No debe permitir un número distinto (7)');
+      expect(tablero.intentarColocarNumero(3, 5, 4), isTrue, reason: 'Debe permitir repetir el 4');
+    });
+
+    test('Zona MO (Morado): Máximo dos números diferentes por zona', () {
+      // Coordenadas (3,6) y (4,6) son MO1
+      expect(tablero.intentarColocarNumero(3, 6, 1), isTrue, reason: 'Permite el primer número (1)');
+      expect(tablero.intentarColocarNumero(4, 6, 2), isTrue, reason: 'Permite un segundo número diferente (2)');
+      
+      // Intentamos en otra coordenada de MO1 (por ejemplo 4,5)
+      expect(tablero.intentarColocarNumero(4, 5, 3), isFalse, reason: 'No permite un tercer número diferente (3)');
+      expect(tablero.intentarColocarNumero(4, 5, 1), isTrue, reason: 'Sí permite repetir uno de los ya existentes (1)');
+    });
+    
+    test('Sobreescribir un número en la misma casilla se valida y falla correctamente', () {
+      // (1,4) y (2,4) son RO1
+      tablero.intentarColocarNumero(1, 4, 3);
+      tablero.intentarColocarNumero(2, 4, 4);
+      
+      // Intento cambiar el 3 por un 4 (debería fallar porque ya hay un 4 en la zona y la casilla NO ESTÁ VACÍA)
+      expect(tablero.intentarColocarNumero(1, 4, 4), isFalse);
+      
+      // Intento cambiar el 3 por un 5 (falla igual porque la casilla YA TIENE NÚMERO y no se puede sobreescribir así)
+      expect(tablero.intentarColocarNumero(1, 4, 5), isFalse);
+      expect(tablero.obtenerCasilla(1, 4).valor, 3);
+    });
+  });
+
+  group('Pruebas de Casillas Iniciales y Fase de Preparación', () {
+    late CapaZonas capa;
+    late Tablero tablero;
+
+    setUp(() {
+      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
+      tablero = Tablero(capa);
+    });
+
+    test('Las casillas iniciales se marcan correctamente en el tablero', () {
+      // Verificamos un par de coordenadas que sí deben ser iniciales
+      expect(tablero.obtenerCasilla(2, 6).esInicial, isTrue);
+      expect(tablero.obtenerCasilla(4, 0).esInicial, isTrue);
+
+      // Verificamos una coordenada normal que NO debe ser inicial
+      expect(tablero.obtenerCasilla(0, 0).esInicial, isFalse);
+    });
+
+    test('Validación permite solo números del 1 al 6', () {
+      expect(tablero.esValidoParaInicial(3), isTrue, reason: 'El 3 es un número válido');
+      expect(tablero.esValidoParaInicial(7), isFalse, reason: 'No debe permitir mayores a 6');
+      expect(tablero.esValidoParaInicial(0), isFalse, reason: 'No debe permitir menores a 1');
+    });
+
+    test('Validación rechaza números repetidos en casillas iniciales', () {
+      // Forzamos un 4 en la primera casilla inicial
+      tablero.obtenerCasilla(2, 6).valor = 4;
+
+      // Intentamos validar un 4 para otra jugada (debería fallar porque ya se usó)
+      expect(tablero.esValidoParaInicial(4), isFalse, reason: 'El 4 ya está en el tablero');
+      
+      // Intentamos validar un 5 (debería pasar porque está libre)
+      expect(tablero.esValidoParaInicial(5), isTrue, reason: 'El 5 no se ha usado');
+    });
+  });
+}
+</file>
+
 <file path="pubspec.lock">
 # Generated by pub
 # See https://dart.dev/tools/pub/glossary#lockfile
@@ -7228,6 +7823,54 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.1.1"
+  flutter_secure_storage:
+    dependency: "direct main"
+    description:
+      name: flutter_secure_storage
+      sha256: "9cad52d75ebc511adfae3d447d5d13da15a55a92c9410e50f67335b6d21d16ea"
+      url: "https://pub.dev"
+    source: hosted
+    version: "9.2.4"
+  flutter_secure_storage_linux:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_linux
+      sha256: be76c1d24a97d0b98f8b54bce6b481a380a6590df992d0098f868ad54dc8f688
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.3"
+  flutter_secure_storage_macos:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_macos
+      sha256: "6c0a2795a2d1de26ae202a0d78527d163f4acbb11cde4c75c670f3a0fc064247"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.3"
+  flutter_secure_storage_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_platform_interface
+      sha256: cf91ad32ce5adef6fba4d736a542baca9daf3beac4db2d04be350b87f69ac4a8
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.2"
+  flutter_secure_storage_web:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_web
+      sha256: f4ebff989b4f07b2656fb16b47852c0aab9fed9b4ec1c70103368337bc1886a9
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.1"
+  flutter_secure_storage_windows:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_windows
+      sha256: b20b07cb5ed4ed74fc567b78a72936203f587eba460af1df11281c9326cd3709
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.2"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -7290,10 +7933,10 @@ packages:
     dependency: transitive
     description:
       name: js
-      sha256: "53385261521cc4a0c4658fd0ad07a7d14591cf8fc33abbceae306ddb974888dc"
+      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
       url: "https://pub.dev"
     source: hosted
-    version: "0.7.2"
+    version: "0.6.7"
   leak_tracker:
     dependency: transitive
     description:
@@ -7691,6 +8334,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.1"
+  win32:
+    dependency: transitive
+    description:
+      name: win32
+      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.15.0"
   xdg_directories:
     dependency: transitive
     description:
@@ -7712,218 +8363,6 @@ sdks:
   flutter: ">=3.35.0"
 </file>
 
-<file path="lib/main.dart">
-import 'package:flutter/material.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
-
-void main() {
-  runApp(const MiJuegoApp());
-}
-
-class MiJuegoApp extends StatelessWidget {
-  const MiJuegoApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Jueguito 7x7',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-      ),
-      // Arrancamos directamente en el menú de mapas
-      home: const PantallaSeleccionMapas(), 
-    );
-  }
-}
-</file>
-
-<file path="test/jueguito_test.dart">
-import 'package:flutter_test/flutter_test.dart';
-import 'package:jueguito/casilla.dart';
-import 'package:jueguito/capa_zonas.dart';
-import 'package:jueguito/tablero.dart';
-
-void main() {
-  group('Pruebas de Tablero y Sistema de Coordenadas Cartesiano', () {
-    late CapaZonas capa;
-    late Tablero tablero;
-
-    setUp(() {
-      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
-      tablero = Tablero(capa);
-    });
-
-    test('El origen (0,0) debe estar en la esquina inferior izquierda', () {
-      Casilla casilla = tablero.obtenerCasilla(0, 0);
-      expect(casilla.coordenada.x, 0);
-      expect(casilla.coordenada.y, 0);
-    });
-
-    test('La coordenada (6,6) debe estar en la esquina superior derecha', () {
-      Casilla casilla = tablero.obtenerCasilla(6, 6);
-      expect(casilla.coordenada.x, 6);
-      expect(casilla.coordenada.y, 6);
-    });
-
-    test('Fuera de límites lanza excepción', () {
-      expect(() => tablero.obtenerCasilla(7, 7), throwsException);
-      expect(() => tablero.obtenerCasilla(-1, 0), throwsException);
-    });
-  });
-
-  group('Pruebas de Capa de Zonas (Nuevo Mapa Personalizado)', () {
-    late CapaZonas capa;
-    late Tablero tablero;
-
-    setUp(() {
-      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
-      tablero = Tablero(capa);
-    });
-
-    // FIX: Actualizamos todos los llamados a obtenerIdZonaDeCasilla
-    test('Las 4 esquinas y el centro deben ser zona Amarilla (AM)', () {
-      expect(tablero.obtenerIdZonaDeCasilla(0, 0), 'AM'); // Abajo izquierda
-      expect(tablero.obtenerIdZonaDeCasilla(6, 0), 'AM'); // Abajo derecha
-      expect(tablero.obtenerIdZonaDeCasilla(0, 6), 'AM'); // Arriba izquierda
-      expect(tablero.obtenerIdZonaDeCasilla(6, 6), 'AM'); // Arriba derecha
-      expect(tablero.obtenerIdZonaDeCasilla(3, 3), 'AM'); // Centro exacto
-    });
-
-    test('Verificar distribución en el cuadrante superior (Y=5 y Y=6)', () {
-      expect(tablero.obtenerIdZonaDeCasilla(1, 6), 'VE1'); // x=1, y=6
-      expect(tablero.obtenerIdZonaDeCasilla(3, 6), 'MO1'); // x=3, y=6
-      expect(tablero.obtenerIdZonaDeCasilla(2, 5), 'AZ1'); // x=2, y=5
-      expect(tablero.obtenerIdZonaDeCasilla(6, 5), 'VE2'); // x=6, y=5
-    });
-
-    test('Verificar distribución en el centro (Y=3 y Y=4)', () {
-      expect(tablero.obtenerIdZonaDeCasilla(0, 4), 'VE1'); // x=0, y=4
-      expect(tablero.obtenerIdZonaDeCasilla(1, 4), 'RO1'); // x=1, y=4
-      expect(tablero.obtenerIdZonaDeCasilla(2, 3), 'MO2'); // x=2, y=3
-      expect(tablero.obtenerIdZonaDeCasilla(4, 3), 'VE2'); // x=4, y=3
-    });
-
-    test('Verificar distribución en el cuadrante inferior (Y=0 y Y=1)', () {
-      expect(tablero.obtenerIdZonaDeCasilla(1, 0), 'MO2'); // x=1, y=0
-      expect(tablero.obtenerIdZonaDeCasilla(3, 0), 'RO2'); // x=3, y=0
-      expect(tablero.obtenerIdZonaDeCasilla(1, 1), 'RO1'); // x=1, y=1
-      expect(tablero.obtenerIdZonaDeCasilla(5, 1), 'AZ2'); // x=5, y=1
-    });
-
-    test('Las zonas en memoria se comparan correctamente por su ID de texto', () {
-      final zona1 = tablero.obtenerIdZonaDeCasilla(0, 0); // AM
-      final zona2 = tablero.obtenerIdZonaDeCasilla(3, 3); // AM
-      
-      // Como ahora son Strings directos, se comparan así:
-      expect(zona1 == zona2, isTrue);
-    });
-  });
-
-  group('Pruebas de Inserción y Reglas de Tipos', () {
-    late CapaZonas capa;
-    late Tablero tablero;
-
-    setUp(() {
-      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
-      tablero = Tablero(capa);
-    });
-
-    test('Casilla estaVacia funciona correctamente', () {
-      var casilla = tablero.obtenerCasilla(0, 0);
-      expect(casilla.estaVacia, isTrue);
-      
-      tablero.intentarColocarNumero(0, 0, 5);
-      expect(casilla.estaVacia, isFalse);
-      expect(casilla.valor, 5);
-    });
-
-    test('Zona VE (Verde): Permite cualquier número repetido o distinto', () {
-      // Coordenadas (0,4) y (0,3) son VE1 en el nuevo mapa
-      expect(tablero.intentarColocarNumero(0, 4, 3), isTrue, reason: 'Debe permitir el primer número');
-      expect(tablero.intentarColocarNumero(0, 3, 3), isTrue, reason: 'Debe permitir repetir número');
-      expect(tablero.intentarColocarNumero(1, 6, 7), isTrue, reason: 'Debe permitir número distinto');
-    });
-
-    test('Zona RO (Rojo) y AM (Amarillo): Todos los números deben ser distintos', () {
-      // Coordenadas (1,4) y (1,3) son RO1
-      expect(tablero.intentarColocarNumero(1, 4, 3), isTrue);
-      expect(tablero.intentarColocarNumero(1, 3, 3), isFalse, reason: 'No debe permitir repetir el 3 en zona Roja');
-      expect(tablero.intentarColocarNumero(1, 3, 5), isTrue, reason: 'Debe permitir un número distinto (5)');
-
-      // Coordenadas (0,0) y (6,6) son AM
-      expect(tablero.intentarColocarNumero(0, 0, 9), isTrue);
-      expect(tablero.intentarColocarNumero(6, 6, 9), isFalse, reason: 'No debe permitir repetir el 9 en el borde Amarillo');
-    });
-
-    test('Zona AZ (Azul): Todos los números deben ser iguales', () {
-      // Coordenadas (2,5) y (3,5) son AZ1
-      expect(tablero.intentarColocarNumero(2, 5, 4), isTrue);
-      expect(tablero.intentarColocarNumero(3, 5, 7), isFalse, reason: 'No debe permitir un número distinto (7)');
-      expect(tablero.intentarColocarNumero(3, 5, 4), isTrue, reason: 'Debe permitir repetir el 4');
-    });
-
-    test('Zona MO (Morado): Máximo dos números diferentes por zona', () {
-      // Coordenadas (3,6) y (4,6) son MO1
-      expect(tablero.intentarColocarNumero(3, 6, 1), isTrue, reason: 'Permite el primer número (1)');
-      expect(tablero.intentarColocarNumero(4, 6, 2), isTrue, reason: 'Permite un segundo número diferente (2)');
-      
-      // Intentamos en otra coordenada de MO1 (por ejemplo 4,5)
-      expect(tablero.intentarColocarNumero(4, 5, 3), isFalse, reason: 'No permite un tercer número diferente (3)');
-      expect(tablero.intentarColocarNumero(4, 5, 1), isTrue, reason: 'Sí permite repetir uno de los ya existentes (1)');
-    });
-    
-    test('Sobreescribir un número en la misma casilla se valida y falla correctamente', () {
-      // (1,4) y (2,4) son RO1
-      tablero.intentarColocarNumero(1, 4, 3);
-      tablero.intentarColocarNumero(2, 4, 4);
-      
-      // Intento cambiar el 3 por un 4 (debería fallar porque ya hay un 4 en la zona y la casilla NO ESTÁ VACÍA)
-      expect(tablero.intentarColocarNumero(1, 4, 4), isFalse);
-      
-      // Intento cambiar el 3 por un 5 (falla igual porque la casilla YA TIENE NÚMERO y no se puede sobreescribir así)
-      expect(tablero.intentarColocarNumero(1, 4, 5), isFalse);
-      expect(tablero.obtenerCasilla(1, 4).valor, 3);
-    });
-  });
-
-  group('Pruebas de Casillas Iniciales y Fase de Preparación', () {
-    late CapaZonas capa;
-    late Tablero tablero;
-
-    setUp(() {
-      capa = CapaZonas(TipoMapa.mapa1); // FIX: Agregamos el mapa por defecto
-      tablero = Tablero(capa);
-    });
-
-    test('Las casillas iniciales se marcan correctamente en el tablero', () {
-      // Verificamos un par de coordenadas que sí deben ser iniciales
-      expect(tablero.obtenerCasilla(2, 6).esInicial, isTrue);
-      expect(tablero.obtenerCasilla(4, 0).esInicial, isTrue);
-
-      // Verificamos una coordenada normal que NO debe ser inicial
-      expect(tablero.obtenerCasilla(0, 0).esInicial, isFalse);
-    });
-
-    test('Validación permite solo números del 1 al 6', () {
-      expect(tablero.esValidoParaInicial(3), isTrue, reason: 'El 3 es un número válido');
-      expect(tablero.esValidoParaInicial(7), isFalse, reason: 'No debe permitir mayores a 6');
-      expect(tablero.esValidoParaInicial(0), isFalse, reason: 'No debe permitir menores a 1');
-    });
-
-    test('Validación rechaza números repetidos en casillas iniciales', () {
-      // Forzamos un 4 en la primera casilla inicial
-      tablero.obtenerCasilla(2, 6).valor = 4;
-
-      // Intentamos validar un 4 para otra jugada (debería fallar porque ya se usó)
-      expect(tablero.esValidoParaInicial(4), isFalse, reason: 'El 4 ya está en el tablero');
-      
-      // Intentamos validar un 5 (debería pasar porque está libre)
-      expect(tablero.esValidoParaInicial(5), isTrue, reason: 'El 5 no se ha usado');
-    });
-  });
-}
-</file>
-
 <file path="pubspec.yaml">
 name: jueguito
 description: A sample command-line application.
@@ -7942,6 +8381,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   audioplayers: ^6.7.1
   http: ^1.6.0
+  flutter_secure_storage: ^9.2.2
 
 dev_dependencies:
   lints: ^6.0.0
@@ -7955,6 +8395,30 @@ flutter:
   assets:
     - assets/sonidos/
     - assets/mapas/
+</file>
+
+<file path="lib/main.dart">
+import 'package:flutter/material.dart';
+import 'package:jueguito/ui/pantalla_carga.dart';
+
+void main() {
+  runApp(const MiJuegoApp());
+}
+
+class MiJuegoApp extends StatelessWidget {
+  const MiJuegoApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Jueguito 7x7',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      ),
+      home: const PantallaCarga(),
+    );
+  }
+}
 </file>
 
 <file path="lib/tablero.dart">

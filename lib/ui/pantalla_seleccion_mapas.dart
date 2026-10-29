@@ -4,6 +4,9 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
+// Imports agregados para la seguridad
+import 'package:jueguito/servicios/servicio_auth.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
 
 class DatosMapa {
   final String titulo;
@@ -23,6 +26,7 @@ class PantallaSeleccionMapas extends StatefulWidget {
 
 class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
+  String _nombreUsuario = 'Jugador'; // <-- Variable para guardar el nombre
 
   final List<DatosMapa> _mapas = [
     DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
@@ -34,12 +38,20 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
   @override
   void initState() {
     super.initState();
+    _cargarUsuario(); // <-- Cargamos el usuario al entrar
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    // Iniciamos la animación en cuanto carga la pantalla
     _animController.forward();
+  }
+
+  // --- NUEVA FUNCIÓN PARA LEER EL USUARIO ---
+  void _cargarUsuario() async {
+    final usuario = await ServicioAuth().obtenerUsuarioActual();
+    if (mounted && usuario != null) {
+      setState(() => _nombreUsuario = usuario);
+    }
   }
 
   @override
@@ -49,10 +61,7 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
   }
 
   void _seleccionarMapa(BuildContext context, TipoMapa tipo) {
-    // 1. Creamos el tablero con el mapa elegido
     final tableroSeleccionado = Tablero(CapaZonas(tipo));
-    
-    // 2. Navegamos a la pantalla del juego inyectando el nuevo BLoC
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => BlocProvider(
@@ -63,32 +72,112 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
   }
 
+  void _cerrarSesion() async {
+    await ServicioAuth().cerrarSesion();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PantallaLogin()),
+      );
+    }
+  }
+
+  void _confirmarBorrarCuenta() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Borrar cuenta?'),
+        content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context); 
+              
+              final resultado = await ServicioAuth().borrarCuenta();
+              
+              if (mounted) {
+                if (resultado['exito'] == true) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PantallaLogin()),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cuenta eliminada correctamente'), backgroundColor: Colors.green),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(resultado['mensaje']), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            child: const Text('Sí, borrar mi cuenta'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 1. Aquí cambiamos el color de fondo de toda la pantalla
-      backgroundColor: Colors.blueGrey[900], // Un tono oscuro muy elegante (puedes usar Colors.grey[900] también)
-      
+      backgroundColor: Colors.blueGrey[900], 
       appBar: AppBar(
-        // 2. Hacemos que la barra superior combine con el fondo oscuro
         backgroundColor: Colors.blueGrey[900], 
-        foregroundColor: Colors.white, // Hace que el texto y los íconos del AppBar sean blancos
-        elevation: 0, // Quitamos la rayita de sombra para un look más limpio
-        title: const Text('Selecciona un Mapa', style: TextStyle(fontWeight: FontWeight.bold)),
+        foregroundColor: Colors.white, 
+        elevation: 0, 
+        // --- AQUÍ MOSTRAMOS EL NOMBRE DEL USUARIO ---
+        title: Text('Hola, $_nombreUsuario', style: const TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.person, color: Colors.white), // Cambié el engranaje por un ícono de usuario
+            onSelected: (value) {
+              if (value == 'cerrar_sesion') _cerrarSesion();
+              else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(
+                value: 'cerrar_sesion',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.black54),
+                    SizedBox(width: 8),
+                    Text('Cerrar Sesión'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'borrar_cuenta',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: ListView.builder(
+        // ... (Tu código del ListView.builder se queda EXACTAMENTE igual)
         padding: const EdgeInsets.all(16.0),
         itemCount: _mapas.length,
         itemBuilder: (context, index) {
           final mapa = _mapas[index];
 
-          // Animación "Staggered" (en cascada). Cada elemento entra un poco más tarde que el anterior.
           final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
             CurvedAnimation(
               parent: _animController,
               curve: Interval(
-                index * 0.2, // Retraso progresivo: 0.0, 0.2, 0.4...
+                index * 0.2, 
                 1.0,
                 curve: Curves.easeOutCubic,
               ),
@@ -104,14 +193,12 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                 borderRadius: BorderRadius.circular(16),
                 child: Ink(
                   decoration: BoxDecoration(
-                    color: Colors.blueGrey[800], // <-- Tarjeta gris oscura (contrasta con el fondo 900)
+                    color: Colors.blueGrey[800], 
                     borderRadius: BorderRadius.circular(16),
-                    // Sombra más fuerte para que parezca que flota
                     boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
                   ),
                   child: Row(
                     children: [
-                      // La imagen del mapa (esto se queda igual)
                       ClipRRect(
                         borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
                         child: Image.asset(
@@ -122,26 +209,23 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                           errorBuilder: (context, error, stackTrace) => Container(
                             width: 120,
                             height: 120,
-                            color: Colors.blueGrey[700], // <-- Comodín oscuro
+                            color: Colors.blueGrey[700], 
                             child: const Icon(Icons.map, size: 40, color: Colors.white54),
                           ),
                         ),
                       ),
                       const SizedBox(width: 16),
-                      // Textos del botón
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               mapa.titulo,
-                              // <-- Título en blanco para que resalte
                               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               mapa.descripcion,
-                              // <-- Descripción en un blanco opaco
                               style: const TextStyle(fontSize: 14, color: Colors.white70), 
                             ),
                           ],
