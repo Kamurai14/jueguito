@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
-// Asegúrate de importar la pantalla de selección de mapas para navegar hacia allá
-import 'pantalla_seleccion_mapas.dart'; 
+import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
+import 'package:jueguito/utils/validador_auth.dart';
 
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
@@ -11,49 +11,61 @@ class PantallaLogin extends StatefulWidget {
 }
 
 class _PantallaLoginState extends State<PantallaLogin> {
-  // Paleta de colores extraída de la portada del juego "Brilliant"
-  final Color colorFondoCrema = const Color(0xFFF8F5EE);
-  final Color colorRosaBrilliant = const Color(0xFFE30059);
-  final Color colorNaranjaBrilliant = const Color(0xFFFF6B00);
-  final Color colorAzulFuerte = const Color(0xFF0055A4);
-
-  final TextEditingController _controladorUsuario = TextEditingController();
-  final TextEditingController _controladorPassword = TextEditingController();
-  
+  final _controladorUsuario = TextEditingController();
+  final _controladorPassword = TextEditingController();
+  final _controladorConfirmarPassword = TextEditingController();
   bool _estaRegistrando = false;
   bool _cargando = false;
 
+  @override
+  void dispose() {
+    _controladorUsuario.dispose();
+    _controladorPassword.dispose();
+    _controladorConfirmarPassword.dispose();
+    super.dispose();
+  }
+
   void _procesarFormulario() async {
-    // 1. Validar que no envíen campos vacíos
     final usuario = _controladorUsuario.text.trim();
     final password = _controladorPassword.text.trim();
+    final confirmarPassword = _controladorConfirmarPassword.text.trim();
 
-    if (usuario.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, llena todos los campos')),
-      );
-      return;
+    // 1. Usar el validador extraído
+    if (_estaRegistrando) {
+      final error = ValidadorAuth.validarRegistro(usuario, password, confirmarPassword);
+      if (error != null) {
+        _mostrarError(error);
+        return;
+      }
+    } else {
+      // Para login normal, solo checamos que no estén vacíos
+      if (usuario.isEmpty || password.isEmpty) {
+        _mostrarError('Por favor, llena todos los campos obligatorios.');
+        return;
+      }
     }
 
     setState(() => _cargando = true);
-    
     final servicio = ServicioAuth();
     Map<String, dynamic> resultado;
 
-    // 2. Decidir si registramos o iniciamos sesión
+    // 2. Procesar Registro o Login
     if (_estaRegistrando) {
       resultado = await servicio.registrar(usuario, password);
       
       if (resultado['exito'] == true) {
-        // Si se registra bien, lo pasamos al modo login automáticamente
         setState(() {
           _estaRegistrando = false;
           _cargando = false;
-          _controladorPassword.clear(); // Limpiamos contraseña por seguridad
+          _controladorPassword.clear();
+          _controladorConfirmarPassword.clear();
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('¡Cuenta creada! Ahora inicia sesión.'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('¡Cuenta creada! Ahora inicia sesión.'), 
+              backgroundColor: Colors.green
+            ),
           );
         }
         return; 
@@ -62,8 +74,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
       resultado = await servicio.login(usuario, password);
       
       if (resultado['exito'] == true) {
-        print('Token recibido y validado: ${resultado['token']}');
-        // Si el login es exitoso, ¡vamos al menú de mapas!
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -74,11 +84,14 @@ class _PantallaLoginState extends State<PantallaLogin> {
       }
     }
 
-    // 3. Si hubo algún error (ya sea en login o registro), lo mostramos en pantalla
     setState(() => _cargando = false);
+    _mostrarError(resultado['mensaje']);
+  }
+
+  void _mostrarError(String mensaje) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(resultado['mensaje']), backgroundColor: Colors.red),
+        SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
       );
     }
   }
@@ -86,113 +99,94 @@ class _PantallaLoginState extends State<PantallaLogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: colorFondoCrema, // <-- El fondo cremita relajante
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Título con el estilo y color de la caja
-                Text(
-                  'BRILLIANT',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    color: colorNaranjaBrilliant,
-                    letterSpacing: 2,
-                    shadows: [
-                      Shadow(color: colorRosaBrilliant.withOpacity(0.5), offset: const Offset(2, 2), blurRadius: 4)
-                    ]
-                  ),
+      backgroundColor: const Color(0xFFF8F5EE), // Crema Brilliant
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'BRILLIANT',
+                style: TextStyle(
+                  fontSize: 40, 
+                  fontWeight: FontWeight.w900, 
+                  color: Color(0xFFFF6B00) // Naranja
                 ),
-                Text(
-                  '7x7 PUZZLE',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: colorAzulFuerte,
-                    letterSpacing: 4,
-                  ),
+              ),
+              const SizedBox(height: 40),
+              
+              TextField(
+                controller: _controladorUsuario,
+                decoration: const InputDecoration(
+                  labelText: 'Usuario',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
                 ),
-                const SizedBox(height: 50),
+              ),
+              const SizedBox(height: 16),
+              
+              TextField(
+                controller: _controladorPassword,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-                // Campo de Usuario
-                TextField(
-                  controller: _controladorUsuario,
-                  decoration: InputDecoration(
-                    labelText: 'Usuario',
-                    labelStyle: TextStyle(color: colorAzulFuerte),
-                    filled: true,
-                    fillColor: Colors.white, // Fondo blanco puro para que resalte sobre el crema
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+              // Animación simple para mostrar/ocultar el campo de confirmar contraseña
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: _estaRegistrando ? 70 : 0,
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: TextField(
+                    controller: _controladorConfirmarPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline),
                     ),
-                    prefixIcon: Icon(Icons.person, color: colorRosaBrilliant),
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Campo de Contraseña
-                TextField(
-                  controller: _controladorPassword,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: 'Contraseña',
-                    labelStyle: TextStyle(color: colorAzulFuerte),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    prefixIcon: Icon(Icons.lock, color: colorRosaBrilliant),
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Botón Principal
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
+              ),
+              
+              const SizedBox(height: 24),
+              
+              _cargando 
+                ? const CircularProgressIndicator(color: Color(0xFFE30059))
+                : ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: colorAzulFuerte, // Contraste azul oscuro de la caja
+                      backgroundColor: const Color(0xFF0055A4), // Azul profundo
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 5,
+                      minimumSize: const Size(double.infinity, 50),
                     ),
-                    onPressed: _cargando ? null : _procesarFormulario,
-                    child: _cargando 
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            _estaRegistrando ? 'CREAR CUENTA' : 'ENTRAR',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1),
-                          ),
+                    onPressed: _procesarFormulario,
+                    child: Text(
+                      _estaRegistrando ? 'Crear Cuenta' : 'Entrar', 
+                      style: const TextStyle(fontSize: 18)
+                    ),
                   ),
+                  
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _estaRegistrando = !_estaRegistrando;
+                    _controladorConfirmarPassword.clear();
+                  });
+                },
+                child: Text(
+                  _estaRegistrando 
+                    ? '¿Ya tienes cuenta? Inicia sesión' 
+                    : '¿No tienes cuenta? Regístrate',
+                  style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
                 ),
-                const SizedBox(height: 16),
-
-                // Botón para cambiar entre Login y Registro
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _estaRegistrando = !_estaRegistrando;
-                    });
-                  },
-                  child: Text(
-                    _estaRegistrando 
-                        ? '¿Ya tienes cuenta? Inicia sesión aquí' 
-                        : '¿No tienes cuenta? Regístrate gratis',
-                    style: TextStyle(color: colorRosaBrilliant, fontWeight: FontWeight.bold),
-                  ),
-                )
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
