@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
+import 'package:jueguito/ui/pantalla_carga.dart';
 
 void main() {
   runApp(const MiJuegoApp());
@@ -15,7 +15,7 @@ class MiJuegoApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
-      home: const PantallaLogin(),
+      home: const PantallaCarga(),
     );
   }
 }

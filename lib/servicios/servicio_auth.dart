@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ServicioAuth {
   final String _baseUrl = 'http://localhost:8080';
+  final _almacenamientoSeguro = const FlutterSecureStorage();
 
-  // 1. Función para registrar usuario
+  // Función para registrar usuario
   Future<Map<String, dynamic>> registrar(String usuario, String password) async {
     try {
       final url = Uri.parse('$_baseUrl/registro');
@@ -25,7 +28,7 @@ class ServicioAuth {
     }
   }
 
-  // 2. Función para iniciar sesión
+  // Función para iniciar sesión y GUARDAR el token
   Future<Map<String, dynamic>> login(String usuario, String password) async {
     try {
       final url = Uri.parse('$_baseUrl/login');
@@ -37,6 +40,8 @@ class ServicioAuth {
       final datos = jsonDecode(respuesta.body);
       
       if (respuesta.statusCode == 200) {
+        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
+        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
         return {'exito': true, 'token': datos['token']};
       } else {
         return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
@@ -44,5 +49,16 @@ class ServicioAuth {
     } catch (e) {
       return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
     }
+  }
+
+  // Verifica si hay un token guardado en el teléfono
+  Future<bool> tieneSesionActiva() async {
+    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+    return token != null;
+  }
+
+  // Borra el token (Para el botón de Cerrar Sesión)
+  Future<void> cerrarSesion() async {
+    await _almacenamientoSeguro.delete(key: 'jwt_token');
   }
 }
