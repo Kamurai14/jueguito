@@ -1,44 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:jueguito/servicios/servicio_auth.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 
-class PantallaCarga extends StatefulWidget {
+class PantallaCarga extends StatelessWidget {
   const PantallaCarga({super.key});
-
-  @override
-  State<PantallaCarga> createState() => _PantallaCargaState();
-}
-
-class _PantallaCargaState extends State<PantallaCarga> {
-  @override
-  void initState() {
-    super.initState();
-    _verificarSesion();
-  }
-
-  void _verificarSesion() async {
-    // Le damos un pequeño delay solo para que la animación de carga se vea fluida
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    final tieneSesion = await ServicioAuth().tieneSesionActiva();
-
-    if (!mounted) return;
-
-    if (tieneSesion) {
-      // Si ya hay token, va directo a los mapas
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
-      );
-    } else {
-      // Si no hay token, lo mandamos al Login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PantallaLogin()),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {

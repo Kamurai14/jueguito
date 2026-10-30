@@ -4,9 +4,12 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
-// Imports agregados para la seguridad
+
+// --- Imports de Autenticación y BLoC Global ---
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_event.dart';
+import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
 
 class DatosMapa {
   final String titulo;
@@ -26,7 +29,6 @@ class PantallaSeleccionMapas extends StatefulWidget {
 
 class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  String _nombreUsuario = 'Jugador'; // <-- Variable para guardar el nombre
 
   final List<DatosMapa> _mapas = [
     DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
@@ -38,20 +40,11 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
   @override
   void initState() {
     super.initState();
-    _cargarUsuario(); // <-- Cargamos el usuario al entrar
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
     _animController.forward();
-  }
-
-  // --- NUEVA FUNCIÓN PARA LEER EL USUARIO ---
-  void _cargarUsuario() async {
-    final usuario = await ServicioAuth().obtenerUsuarioActual();
-    if (mounted && usuario != null) {
-      setState(() => _nombreUsuario = usuario);
-    }
   }
 
   @override
@@ -72,14 +65,9 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
   }
 
-  void _cerrarSesion() async {
-    await ServicioAuth().cerrarSesion();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PantallaLogin()),
-      );
-    }
+  void _cerrarSesion() {
+    // Le avisamos al BLoC Global y él nos manda al Login automáticamente
+    context.read<AuthBloc>().add(CerrarSesionEvent());
   }
 
   void _confirmarBorrarCuenta() {
@@ -102,10 +90,9 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
               
               if (mounted) {
                 if (resultado['exito'] == true) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PantallaLogin()),
-                  );
+                  // Si se borró en el server, mandamos el evento al BLoC para limpiar sesión y salir
+                  context.read<AuthBloc>().add(CerrarSesionEvent());
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Cuenta eliminada correctamente'), backgroundColor: Colors.green),
                   );
@@ -131,43 +118,58 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
         backgroundColor: Colors.blueGrey[900], 
         foregroundColor: Colors.white, 
         elevation: 0, 
-        // --- AQUÍ MOSTRAMOS EL NOMBRE DEL USUARIO ---
-        title: Text('Hola, $_nombreUsuario', style: const TextStyle(fontWeight: FontWeight.bold)),
+        // 1. TÍTULO INTELIGENTE SEGÚN EL ESTADO
+        title: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAutenticado) {
+              return Text('Hola, ${state.usuario}', style: const TextStyle(fontWeight: FontWeight.bold));
+            }
+            return const Text('Modo Invitado', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey));
+          },
+        ),
         centerTitle: true,
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.person, color: Colors.white), // Cambié el engranaje por un ícono de usuario
-            onSelected: (value) {
-              if (value == 'cerrar_sesion') _cerrarSesion();
-              else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+          // 2. MENÚ DE OPCIONES INTELIGENTE
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.person, color: Colors.white),
+                onSelected: (value) {
+                  if (value == 'cerrar_sesion') _cerrarSesion();
+                  else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+                },
+                itemBuilder: (BuildContext context) => [
+                  // Solo mostramos "Borrar Cuenta" si el usuario SÍ está autenticado (no invitado)
+                  if (state is AuthAutenticado) ...[
+                    const PopupMenuItem(
+                      value: 'borrar_cuenta',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_forever, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  // El botón de salir siempre se muestra, pero cambia de nombre si es invitado
+                  PopupMenuItem(
+                    value: 'cerrar_sesion',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout, color: Colors.black54),
+                        const SizedBox(width: 8),
+                        Text(state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión'),
+                      ],
+                    ),
+                  ),
+                ],
+              );
             },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem(
-                value: 'cerrar_sesion',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.black54),
-                    SizedBox(width: 8),
-                    Text('Cerrar Sesión'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'borrar_cuenta',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_forever, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),
       body: ListView.builder(
-        // ... (Tu código del ListView.builder se queda EXACTAMENTE igual)
         padding: const EdgeInsets.all(16.0),
         itemCount: _mapas.length,
         itemBuilder: (context, index) {

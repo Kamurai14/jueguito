@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_event.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/utils/validador_auth.dart';
 
 class PantallaLogin extends StatefulWidget {
@@ -30,7 +32,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
     final password = _controladorPassword.text.trim();
     final confirmarPassword = _controladorConfirmarPassword.text.trim();
 
-    // 1. Usar el validador extraído
     if (_estaRegistrando) {
       final error = ValidadorAuth.validarRegistro(usuario, password, confirmarPassword);
       if (error != null) {
@@ -38,7 +39,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
         return;
       }
     } else {
-      // Para login normal, solo checamos que no estén vacíos
       if (usuario.isEmpty || password.isEmpty) {
         _mostrarError('Por favor, llena todos los campos obligatorios.');
         return;
@@ -49,7 +49,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
     final servicio = ServicioAuth();
     Map<String, dynamic> resultado;
 
-    // 2. Procesar Registro o Login
     if (_estaRegistrando) {
       resultado = await servicio.registrar(usuario, password);
       
@@ -75,10 +74,8 @@ class _PantallaLoginState extends State<PantallaLogin> {
       
       if (resultado['exito'] == true) {
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
-          );
+          // Ya no navegamos a mano, solo le avisamos al BLoC y él hace la magia
+          context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
         }
         return; 
       }
@@ -137,7 +134,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
               ),
               const SizedBox(height: 16),
 
-              // Animación simple para mostrar/ocultar el campo de confirmar contraseña
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 height: _estaRegistrando ? 70 : 0,
@@ -185,6 +181,11 @@ class _PantallaLoginState extends State<PantallaLogin> {
                     : '¿No tienes cuenta? Regístrate',
                   style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
                 ),
+              ),
+
+              TextButton(
+                onPressed: () => context.read<AuthBloc>().add(EntrarComoInvitado()),
+                child: const Text('Jugar como Invitado', style: TextStyle(color: Colors.grey, fontSize: 16)),
               ),
             ],
           ),
