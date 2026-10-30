@@ -4,7 +4,14 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ServicioAuth {
-  final String _baseUrl = 'http://localhost:8080';
+ // Cambia a 'true' cuando subas tu servidor a internet
+  final bool _esProduccion = false; 
+  
+  // En desarrollo usamos localhost (o la IP de tu PC), en producción tu dominio seguro
+  String get _baseUrl => _esProduccion 
+      ? 'https://api.tujuego.com' // Aquí irá tu URL real con HTTPS
+      : 'http://localhost:8080';
+
   final _almacenamientoSeguro = const FlutterSecureStorage();
 
   // Función para registrar usuario
