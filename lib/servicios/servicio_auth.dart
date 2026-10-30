@@ -21,6 +21,9 @@ class ServicioAuth {
       final respuesta = await http.post(
         url,
         body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
       );
       
       final datos = jsonDecode(respuesta.body);
@@ -42,6 +45,9 @@ class ServicioAuth {
       final respuesta = await http.post(
         url,
         body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
       );
       
       final datos = jsonDecode(respuesta.body);
@@ -82,6 +88,9 @@ class ServicioAuth {
         url,
         // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
         headers: {'Authorization': 'Bearer $token'},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
       );
       
       if (respuesta.statusCode == 200) {
