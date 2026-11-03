@@ -58,6 +58,19 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                   behavior: SnackBarBehavior.floating,
                 )
               );
+            } else if (state is JuegoEsperandoIniciales &&
+                state.mensajeAlerta != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.mensajeAlerta!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  backgroundColor: Colors.redAccent,
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             }
           },
           builder: (context, state) {

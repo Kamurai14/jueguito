@@ -164,4 +164,59 @@ class Tablero {
     }
     return true; 
   }
+
+  String? validarColocacionInicial(int xDestino, int yDestino, int numero) {
+    String idZonaDestino = obtenerIdZonaDeCasilla(xDestino, yDestino);
+
+    // 1. Regla estricta de zonas Naranjas
+    if (idZonaDestino == 'NA1' && (numero < 4 || numero > 6)) {
+      return 'La zona superior solo acepta 4, 5 o 6.';
+    }
+    if (idZonaDestino == 'NA2' && (numero < 1 || numero > 3)) {
+      return 'La zona inferior solo acepta 1, 2 o 3.';
+    }
+
+    // 2. Sistema de "Reserva" (Evitar que se ahorque en el medio)
+    if (idZonaDestino != 'NA1' && idZonaDestino != 'NA2') {
+      bool na1Ocupada = false;
+      bool na2Ocupada = false;
+      int cantidadPequenosEnMedio = 0; // 1, 2, 3
+      int cantidadGrandesEnMedio = 0;  // 4, 5, 6
+
+      // Escaneamos las casillas iniciales actuales
+      for (int i = 0; i < tamano; i++) {
+        for (int j = 0; j < tamano; j++) {
+          Casilla c = obtenerCasilla(i, j);
+          
+          if (c.esInicial && !c.estaVacia) {
+            // Ignoramos la posición vieja de la pieza si la estamos moviendo
+            if (c.valor == numero) continue;
+
+            String idZona = obtenerIdZonaDeCasilla(i, j);
+            if (idZona == 'NA1') {
+              na1Ocupada = true;
+            } else if (idZona == 'NA2') {
+              na2Ocupada = true;
+            } else {
+              if (c.valor! >= 1 && c.valor! <= 3) cantidadPequenosEnMedio++;
+              if (c.valor! >= 4 && c.valor! <= 6) cantidadGrandesEnMedio++;
+            }
+          }
+        }
+      }
+
+      // Aplicamos el bloqueo si intenta gastar su última pieza vital en el medio
+      if (numero >= 1 && numero <= 3) {
+        if (!na2Ocupada && cantidadPequenosEnMedio >= 2) {
+          return 'Debes reservar este número para la zona naranja inferior.';
+        }
+      } else if (numero >= 4 && numero <= 6) {
+        if (!na1Ocupada && cantidadGrandesEnMedio >= 2) {
+          return 'Debes reservar este número para la zona naranja superior.';
+        }
+      }
+    }
+
+    return null; // Todo en orden, movimiento permitido
+  }
 }

@@ -32,6 +32,13 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   }
 
   void _onInsertarValorInicial(InsertarValorInicial event, Emitter<JuegoState> emit) {
+    // 1. Validamos antes de insertar
+    String? error = state.tablero.validarColocacionInicial(event.x, event.y, event.valor);
+    if (error != null) {
+      emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: state.tablero.contarNumerosIniciales(), mensajeAlerta: error));
+      return; // Detenemos la jugada
+    }
+    
     Casilla target = state.tablero.obtenerCasilla(event.x, event.y);
     
     if (target.esInicial) {
@@ -41,6 +48,13 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   }
 
   void _onMoverValorInicial(MoverValorInicial event, Emitter<JuegoState> emit) {
+    // 1. Validamos antes de mover
+    String? error = state.tablero.validarColocacionInicial(event.xDestino, event.yDestino, event.valor);
+    if (error != null) {
+      emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: state.tablero.contarNumerosIniciales(), mensajeAlerta: error));
+      return; // Detenemos la jugada
+    }
+
     Casilla origen = state.tablero.obtenerCasilla(event.xOrigen, event.yOrigen);
     Casilla destino = state.tablero.obtenerCasilla(event.xDestino, event.yDestino);
     

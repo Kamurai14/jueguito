@@ -159,6 +159,9 @@ lib/
     tema_juego.dart
   utils/
     validador_auth.dart
+  auth_bloc.dart
+  auth_event.dart
+  auth_state.dart
   capa_zonas.dart
   casilla.dart
   juego_bloc.dart
@@ -1765,77 +1768,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.perspectivev3
 </file>
 
-<file path="lib/ui/pantalla_carga.dart">
-import 'package:flutter/material.dart';
-import 'package:jueguito/servicios/servicio_auth.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
-
-class PantallaCarga extends StatefulWidget {
-  const PantallaCarga({super.key});
-
-  @override
-  State<PantallaCarga> createState() => _PantallaCargaState();
-}
-
-class _PantallaCargaState extends State<PantallaCarga> {
-  @override
-  void initState() {
-    super.initState();
-    _verificarSesion();
-  }
-
-  void _verificarSesion() async {
-    // Le damos un pequeño delay solo para que la animación de carga se vea fluida
-    await Future.delayed(const Duration(milliseconds: 800));
-    
-    final tieneSesion = await ServicioAuth().tieneSesionActiva();
-
-    if (!mounted) return;
-
-    if (tieneSesion) {
-      // Si ya hay token, va directo a los mapas
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
-      );
-    } else {
-      // Si no hay token, lo mandamos al Login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const PantallaLogin()),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Usamos el mismo color "cremita" de la caja del juego
-    return const Scaffold(
-      backgroundColor: Color(0xFFF8F5EE),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'BRILLIANT',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFFFF6B00), // Naranja Brilliant
-                letterSpacing: 2,
-              ),
-            ),
-            SizedBox(height: 30),
-            CircularProgressIndicator(color: Color(0xFFE30059)), // Rosa Brilliant
-          ],
-        ),
-      ),
-    );
-  }
-}
-</file>
-
 <file path="lib/utils/validador_auth.dart">
 class ValidadorAuth {
   static String? validarRegistro(String usuario, String password, String confirmarPassword) {
@@ -1856,6 +1788,84 @@ class ValidadorAuth {
     return null; // null significa que todo está correcto
   }
 }
+</file>
+
+<file path="lib/auth_bloc.dart">
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/auth_event.dart';
+import 'package:jueguito/auth_state.dart';
+import 'package:jueguito/servicios/servicio_auth.dart';
+
+class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  final ServicioAuth _servicioAuth = ServicioAuth();
+
+  AuthBloc() : super(AuthInicial()) {
+    on<VerificarSesion>(_onVerificarSesion);
+    on<IniciarSesionEvent>(_onIniciarSesion);
+    on<EntrarComoInvitado>(_onEntrarComoInvitado);
+    on<CerrarSesionEvent>(_onCerrarSesion);
+  }
+
+  void _onVerificarSesion(VerificarSesion event, Emitter<AuthState> emit) async {
+    // Simulamos un pequeño tiempo de carga para que se vea el logo
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    final tieneSesion = await _servicioAuth.tieneSesionActiva();
+    if (tieneSesion) {
+      final usuario = await _servicioAuth.obtenerUsuarioActual() ?? 'Jugador';
+      emit(AuthAutenticado(usuario));
+    } else {
+      emit(AuthNoAutenticado());
+    }
+  }
+
+  void _onIniciarSesion(IniciarSesionEvent event, Emitter<AuthState> emit) {
+    emit(AuthAutenticado(event.usuario));
+  }
+
+  void _onEntrarComoInvitado(EntrarComoInvitado event, Emitter<AuthState> emit) {
+    emit(AuthInvitado());
+  }
+
+  void _onCerrarSesion(CerrarSesionEvent event, Emitter<AuthState> emit) async {
+    await _servicioAuth.cerrarSesion();
+    emit(AuthNoAutenticado());
+  }
+}
+</file>
+
+<file path="lib/auth_event.dart">
+abstract class AuthEvent {}
+
+class VerificarSesion extends AuthEvent {}
+
+class IniciarSesionEvent extends AuthEvent {
+  final String usuario;
+  IniciarSesionEvent(this.usuario);
+}
+
+class EntrarComoInvitado extends AuthEvent {}
+
+class CerrarSesionEvent extends AuthEvent {}
+</file>
+
+<file path="lib/auth_state.dart">
+abstract class AuthState {}
+
+// Pantalla de carga buscando el token
+class AuthInicial extends AuthState {}
+
+// No hay sesión, mostramos el Login
+class AuthNoAutenticado extends AuthState {}
+
+// Hay sesión con un usuario real
+class AuthAutenticado extends AuthState {
+  final String usuario;
+  AuthAutenticado(this.usuario);
+}
+
+// Modo sin cuenta (Invitado)
+class AuthInvitado extends AuthState {}
 </file>
 
 <file path="linux/flutter/CMakeLists.txt">
@@ -5083,197 +5093,33 @@ A sample command-line application with an entrypoint in `bin/`, library code
 in `lib/`, and example unit test in `test/`.
 </file>
 
-<file path="lib/ui/pantalla_login.dart">
+<file path="lib/ui/pantalla_carga.dart">
 import 'package:flutter/material.dart';
-import 'package:jueguito/servicios/servicio_auth.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
-import 'package:jueguito/utils/validador_auth.dart';
 
-class PantallaLogin extends StatefulWidget {
-  const PantallaLogin({super.key});
-
-  @override
-  State<PantallaLogin> createState() => _PantallaLoginState();
-}
-
-class _PantallaLoginState extends State<PantallaLogin> {
-  final _controladorUsuario = TextEditingController();
-  final _controladorPassword = TextEditingController();
-  final _controladorConfirmarPassword = TextEditingController();
-  bool _estaRegistrando = false;
-  bool _cargando = false;
-
-  @override
-  void dispose() {
-    _controladorUsuario.dispose();
-    _controladorPassword.dispose();
-    _controladorConfirmarPassword.dispose();
-    super.dispose();
-  }
-
-  void _procesarFormulario() async {
-    final usuario = _controladorUsuario.text.trim();
-    final password = _controladorPassword.text.trim();
-    final confirmarPassword = _controladorConfirmarPassword.text.trim();
-
-    // 1. Usar el validador extraído
-    if (_estaRegistrando) {
-      final error = ValidadorAuth.validarRegistro(usuario, password, confirmarPassword);
-      if (error != null) {
-        _mostrarError(error);
-        return;
-      }
-    } else {
-      // Para login normal, solo checamos que no estén vacíos
-      if (usuario.isEmpty || password.isEmpty) {
-        _mostrarError('Por favor, llena todos los campos obligatorios.');
-        return;
-      }
-    }
-
-    setState(() => _cargando = true);
-    final servicio = ServicioAuth();
-    Map<String, dynamic> resultado;
-
-    // 2. Procesar Registro o Login
-    if (_estaRegistrando) {
-      resultado = await servicio.registrar(usuario, password);
-      
-      if (resultado['exito'] == true) {
-        setState(() {
-          _estaRegistrando = false;
-          _cargando = false;
-          _controladorPassword.clear();
-          _controladorConfirmarPassword.clear();
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Cuenta creada! Ahora inicia sesión.'), 
-              backgroundColor: Colors.green
-            ),
-          );
-        }
-        return; 
-      }
-    } else {
-      resultado = await servicio.login(usuario, password);
-      
-      if (resultado['exito'] == true) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const PantallaSeleccionMapas()),
-          );
-        }
-        return; 
-      }
-    }
-
-    setState(() => _cargando = false);
-    _mostrarError(resultado['mensaje']);
-  }
-
-  void _mostrarError(String mensaje) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
-      );
-    }
-  }
+class PantallaCarga extends StatelessWidget {
+  const PantallaCarga({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F5EE), // Crema Brilliant
+    // Usamos el mismo color "cremita" de la caja del juego
+    return const Scaffold(
+      backgroundColor: Color(0xFFF8F5EE),
       body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'BRILLIANT',
-                style: TextStyle(
-                  fontSize: 40, 
-                  fontWeight: FontWeight.w900, 
-                  color: Color(0xFFFF6B00) // Naranja
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'BRILLIANT',
+              style: TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFFF6B00), // Naranja Brilliant
+                letterSpacing: 2,
               ),
-              const SizedBox(height: 40),
-              
-              TextField(
-                controller: _controladorUsuario,
-                decoration: const InputDecoration(
-                  labelText: 'Usuario',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              TextField(
-                controller: _controladorPassword,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Animación simple para mostrar/ocultar el campo de confirmar contraseña
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: _estaRegistrando ? 70 : 0,
-                child: SingleChildScrollView(
-                  physics: const NeverScrollableScrollPhysics(),
-                  child: TextField(
-                    controller: _controladorConfirmarPassword,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirmar Contraseña',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock_outline),
-                    ),
-                  ),
-                ),
-              ),
-              
-              const SizedBox(height: 24),
-              
-              _cargando 
-                ? const CircularProgressIndicator(color: Color(0xFFE30059))
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0055A4), // Azul profundo
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    onPressed: _procesarFormulario,
-                    child: Text(
-                      _estaRegistrando ? 'Crear Cuenta' : 'Entrar', 
-                      style: const TextStyle(fontSize: 18)
-                    ),
-                  ),
-                  
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _estaRegistrando = !_estaRegistrando;
-                    _controladorConfirmarPassword.clear();
-                  });
-                },
-                child: Text(
-                  _estaRegistrando 
-                    ? '¿Ya tienes cuenta? Inicia sesión' 
-                    : '¿No tienes cuenta? Regístrate',
-                  style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
-                ),
-              ),
-            ],
-          ),
+            ),
+            SizedBox(height: 30),
+            CircularProgressIndicator(color: Color(0xFFE30059)), // Rosa Brilliant
+          ],
         ),
       ),
     );
@@ -5541,99 +5387,6 @@ class TipoRojo extends Tipo {
 {"info":"This is a generated file; do not edit or check into version control.","plugins":{"ios":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"android":[{"name":"audioplayers_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_android-5.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage-9.2.4\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_android","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_android-2.2.23\\\\","native_build":true,"dependencies":[],"dev_dependency":false}],"macos":[{"name":"audioplayers_darwin","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_darwin-6.4.0\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_macos","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_macos-3.1.3\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_foundation","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_foundation-2.5.1\\\\","shared_darwin_source":true,"native_build":true,"dependencies":[],"dev_dependency":false}],"linux":[{"name":"audioplayers_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_linux-4.2.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_linux-1.2.3\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_linux","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_linux-2.2.1\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"windows":[{"name":"audioplayers_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_windows-4.3.1\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_windows-3.1.2\\\\","native_build":true,"dependencies":[],"dev_dependency":false},{"name":"path_provider_windows","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\path_provider_windows-2.3.0\\\\","native_build":false,"dependencies":[],"dev_dependency":false}],"web":[{"name":"audioplayers_web","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\audioplayers_web-5.2.1\\\\","dependencies":[],"dev_dependency":false},{"name":"flutter_secure_storage_web","path":"C:\\\\Users\\\\luko_\\\\AppData\\\\Local\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\\\\flutter_secure_storage_web-1.2.1\\\\","dependencies":[],"dev_dependency":false}]},"dependencyGraph":[{"name":"audioplayers","dependencies":["audioplayers_android","audioplayers_darwin","audioplayers_linux","audioplayers_web","audioplayers_windows","path_provider"]},{"name":"audioplayers_android","dependencies":[]},{"name":"audioplayers_darwin","dependencies":[]},{"name":"audioplayers_linux","dependencies":[]},{"name":"audioplayers_web","dependencies":[]},{"name":"audioplayers_windows","dependencies":[]},{"name":"flutter_secure_storage","dependencies":["flutter_secure_storage_linux","flutter_secure_storage_macos","flutter_secure_storage_web","flutter_secure_storage_windows"]},{"name":"flutter_secure_storage_linux","dependencies":[]},{"name":"flutter_secure_storage_macos","dependencies":[]},{"name":"flutter_secure_storage_web","dependencies":[]},{"name":"flutter_secure_storage_windows","dependencies":["path_provider"]},{"name":"path_provider","dependencies":["path_provider_android","path_provider_foundation","path_provider_linux","path_provider_windows"]},{"name":"path_provider_android","dependencies":[]},{"name":"path_provider_foundation","dependencies":[]},{"name":"path_provider_linux","dependencies":[]},{"name":"path_provider_windows","dependencies":[]}],"date_created":"2026-10-29 10:43:58.731709","version":"3.35.2","swift_package_manager_enabled":{"ios":false,"macos":false}}
 </file>
 
-<file path="lib/servicios/servicio_auth.dart">
-import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-class ServicioAuth {
-  final String _baseUrl = 'http://localhost:8080';
-  final _almacenamientoSeguro = const FlutterSecureStorage();
-
-  // Función para registrar usuario
-  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
-    try {
-      final url = Uri.parse('$_baseUrl/registro');
-      final respuesta = await http.post(
-        url,
-        body: jsonEncode({'usuario': usuario, 'password': password}),
-      );
-      
-      final datos = jsonDecode(respuesta.body);
-      
-      if (respuesta.statusCode == 200) {
-        return {'exito': true, 'mensaje': datos['mensaje']};
-      } else {
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-
-  // Función para iniciar sesión y GUARDAR el token
-  Future<Map<String, dynamic>> login(String usuario, String password) async {
-    try {
-      final url = Uri.parse('$_baseUrl/login');
-      final respuesta = await http.post(
-        url,
-        body: jsonEncode({'usuario': usuario, 'password': password}),
-      );
-      
-      final datos = jsonDecode(respuesta.body);
-      
-      if (respuesta.statusCode == 200) {
-        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
-        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
-        return {'exito': true, 'token': datos['token']};
-      } else {
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-
-  // Verifica si hay un token guardado en el teléfono
-  Future<bool> tieneSesionActiva() async {
-    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
-    return token != null;
-  }
-
-  // Borra el token (Para el botón de Cerrar Sesión)
-  Future<void> cerrarSesion() async {
-    await _almacenamientoSeguro.delete(key: 'jwt_token');
-  }
-
-  // Pide al servidor borrar la cuenta usando el token de sesión
-  Future<Map<String, dynamic>> borrarCuenta() async {
-    try {
-      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
-      if (token == null) return {'exito': false, 'mensaje': 'No hay sesión activa'};
-
-      final url = Uri.parse('$_baseUrl/borrar-cuenta');
-      final respuesta = await http.delete(
-        url,
-        // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
-        headers: {'Authorization': 'Bearer $token'},
-      );
-      
-      if (respuesta.statusCode == 200) {
-        await cerrarSesion(); // Si se borró en el server, borramos el token del celular
-        return {'exito': true};
-      } else {
-        final datos = jsonDecode(respuesta.body);
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Error al borrar cuenta'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-  
-}
-</file>
-
 <file path="lib/ui/cabecera_juego.dart">
 import 'package:flutter/material.dart';
 import 'package:jueguito/juego_state.dart';
@@ -5686,6 +5439,205 @@ class CabeceraJuego extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+</file>
+
+<file path="lib/ui/pantalla_login.dart">
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_event.dart';
+import 'package:jueguito/servicios/servicio_auth.dart';
+import 'package:jueguito/utils/validador_auth.dart';
+
+class PantallaLogin extends StatefulWidget {
+  const PantallaLogin({super.key});
+
+  @override
+  State<PantallaLogin> createState() => _PantallaLoginState();
+}
+
+class _PantallaLoginState extends State<PantallaLogin> {
+  final _controladorUsuario = TextEditingController();
+  final _controladorPassword = TextEditingController();
+  final _controladorConfirmarPassword = TextEditingController();
+  bool _estaRegistrando = false;
+  bool _cargando = false;
+
+  @override
+  void dispose() {
+    _controladorUsuario.dispose();
+    _controladorPassword.dispose();
+    _controladorConfirmarPassword.dispose();
+    super.dispose();
+  }
+
+  void _procesarFormulario() async {
+    final usuario = _controladorUsuario.text.trim();
+    final password = _controladorPassword.text.trim();
+    final confirmarPassword = _controladorConfirmarPassword.text.trim();
+
+    if (_estaRegistrando) {
+      final error = ValidadorAuth.validarRegistro(usuario, password, confirmarPassword);
+      if (error != null) {
+        _mostrarError(error);
+        return;
+      }
+    } else {
+      if (usuario.isEmpty || password.isEmpty) {
+        _mostrarError('Por favor, llena todos los campos obligatorios.');
+        return;
+      }
+    }
+
+    setState(() => _cargando = true);
+    final servicio = ServicioAuth();
+    Map<String, dynamic> resultado;
+
+    if (_estaRegistrando) {
+      resultado = await servicio.registrar(usuario, password);
+      
+      if (resultado['exito'] == true) {
+        setState(() {
+          _estaRegistrando = false;
+          _cargando = false;
+          _controladorPassword.clear();
+          _controladorConfirmarPassword.clear();
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('¡Cuenta creada! Ahora inicia sesión.'), 
+              backgroundColor: Colors.green
+            ),
+          );
+        }
+        return; 
+      }
+    } else {
+      resultado = await servicio.login(usuario, password);
+      
+      if (resultado['exito'] == true) {
+        if (mounted) {
+          // Ya no navegamos a mano, solo le avisamos al BLoC y él hace la magia
+          context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
+        }
+        return; 
+      }
+    }
+
+    setState(() => _cargando = false);
+    _mostrarError(resultado['mensaje']);
+  }
+
+  void _mostrarError(String mensaje) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensaje), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5EE), // Crema Brilliant
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'BRILLIANT',
+                style: TextStyle(
+                  fontSize: 40, 
+                  fontWeight: FontWeight.w900, 
+                  color: Color(0xFFFF6B00) // Naranja
+                ),
+              ),
+              const SizedBox(height: 40),
+              
+              TextField(
+                controller: _controladorUsuario,
+                decoration: const InputDecoration(
+                  labelText: 'Usuario',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              TextField(
+                controller: _controladorPassword,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Contraseña',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: _estaRegistrando ? 70 : 0,
+                child: SingleChildScrollView(
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: TextField(
+                    controller: _controladorConfirmarPassword,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirmar Contraseña',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.lock_outline),
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              _cargando 
+                ? const CircularProgressIndicator(color: Color(0xFFE30059))
+                : ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0055A4), // Azul profundo
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: _procesarFormulario,
+                    child: Text(
+                      _estaRegistrando ? 'Crear Cuenta' : 'Entrar', 
+                      style: const TextStyle(fontSize: 18)
+                    ),
+                  ),
+                  
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _estaRegistrando = !_estaRegistrando;
+                    _controladorConfirmarPassword.clear();
+                  });
+                },
+                child: Text(
+                  _estaRegistrando 
+                    ? '¿Ya tienes cuenta? Inicia sesión' 
+                    : '¿No tienes cuenta? Regístrate',
+                  style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
+                ),
+              ),
+
+              TextButton(
+                onPressed: () => context.read<AuthBloc>().add(EntrarComoInvitado()),
+                child: const Text('Jugar como Invitado', style: TextStyle(color: Colors.grey, fontSize: 16)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -6055,171 +6007,6 @@ class CuadriculaTablero extends StatelessWidget {
           }
         );
       },
-    );
-  }
-}
-</file>
-
-<file path="lib/ui/pantalla_seleccion_mapas.dart">
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jueguito/capa_zonas.dart';
-import 'package:jueguito/tablero.dart';
-import 'package:jueguito/juego_bloc.dart';
-import 'package:jueguito/ui/pantalla_tablero.dart';
-
-class DatosMapa {
-  final String titulo;
-  final String descripcion;
-  final TipoMapa tipo;
-  final String rutaImagen;
-
-  DatosMapa(this.titulo, this.descripcion, this.tipo, this.rutaImagen);
-}
-
-class PantallaSeleccionMapas extends StatefulWidget {
-  const PantallaSeleccionMapas({super.key});
-
-  @override
-  State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
-}
-
-class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-
-  final List<DatosMapa> _mapas = [
-    DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
-    DatosMapa('Mapa 2', 'Nivel 2', TipoMapa.mapa2, 'assets/mapas/mapa2.png'),
-    DatosMapa('Mapa 3', 'Nivel 3', TipoMapa.mapa3, 'assets/mapas/mapa3.png'),
-    DatosMapa('Mapa 4', 'Nivel 4', TipoMapa.mapa4, 'assets/mapas/mapa4.png'),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    // Iniciamos la animación en cuanto carga la pantalla
-    _animController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  void _seleccionarMapa(BuildContext context, TipoMapa tipo) {
-    // 1. Creamos el tablero con el mapa elegido
-    final tableroSeleccionado = Tablero(CapaZonas(tipo));
-    
-    // 2. Navegamos a la pantalla del juego inyectando el nuevo BLoC
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => BlocProvider(
-          create: (context) => JuegoBloc(tableroSeleccionado),
-          child: const PantallaTablero(),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      // 1. Aquí cambiamos el color de fondo de toda la pantalla
-      backgroundColor: Colors.blueGrey[900], // Un tono oscuro muy elegante (puedes usar Colors.grey[900] también)
-      
-      appBar: AppBar(
-        // 2. Hacemos que la barra superior combine con el fondo oscuro
-        backgroundColor: Colors.blueGrey[900], 
-        foregroundColor: Colors.white, // Hace que el texto y los íconos del AppBar sean blancos
-        elevation: 0, // Quitamos la rayita de sombra para un look más limpio
-        title: const Text('Selecciona un Mapa', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-      ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _mapas.length,
-        itemBuilder: (context, index) {
-          final mapa = _mapas[index];
-
-          // Animación "Staggered" (en cascada). Cada elemento entra un poco más tarde que el anterior.
-          final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
-            CurvedAnimation(
-              parent: _animController,
-              curve: Interval(
-                index * 0.2, // Retraso progresivo: 0.0, 0.2, 0.4...
-                1.0,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
-          );
-
-          return SlideTransition(
-            position: animacionEntrada,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: InkWell(
-                onTap: () => _seleccionarMapa(context, mapa.tipo),
-                borderRadius: BorderRadius.circular(16),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey[800], // <-- Tarjeta gris oscura (contrasta con el fondo 900)
-                    borderRadius: BorderRadius.circular(16),
-                    // Sombra más fuerte para que parezca que flota
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
-                  ),
-                  child: Row(
-                    children: [
-                      // La imagen del mapa (esto se queda igual)
-                      ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                        child: Image.asset(
-                          mapa.rutaImagen,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 120,
-                            height: 120,
-                            color: Colors.blueGrey[700], // <-- Comodín oscuro
-                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      // Textos del botón
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              mapa.titulo,
-                              // <-- Título en blanco para que resalte
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              mapa.descripcion,
-                              // <-- Descripción en un blanco opaco
-                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
-                      const SizedBox(width: 12),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 }
@@ -7206,6 +6993,121 @@ Future<void> _jugarHastaPuntuar(WidgetTester tester, JuegoBloc blocReal) async {
 }
 </file>
 
+<file path="lib/servicios/servicio_auth.dart">
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class ServicioAuth {
+ // Cambia a 'true' cuando subas tu servidor a internet
+  final bool _esProduccion = false; 
+  
+  // En desarrollo usamos localhost (o la IP de tu PC), en producción tu dominio seguro
+  String get _baseUrl => _esProduccion 
+      ? 'https://api.tujuego.com' // Aquí irá tu URL real con HTTPS
+      : 'http://localhost:8080';
+
+  final _almacenamientoSeguro = const FlutterSecureStorage();
+
+  // Función para registrar usuario
+  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/registro');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        return {'exito': true, 'mensaje': datos['mensaje']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  // Función para iniciar sesión y GUARDAR el token
+  Future<Map<String, dynamic>> login(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/login');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
+        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
+        await _almacenamientoSeguro.write(key: 'usuario_actual', value: usuario);
+        return {'exito': true, 'token': datos['token']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  // Verifica si hay un token guardado en el teléfono
+  Future<bool> tieneSesionActiva() async {
+    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+    return token != null;
+  }
+
+  // Borra el token (Para el botón de Cerrar Sesión)
+  Future<void> cerrarSesion() async {
+    await _almacenamientoSeguro.delete(key: 'jwt_token');
+    await _almacenamientoSeguro.delete(key: 'usuario_actual');
+  }
+
+  // Pide al servidor borrar la cuenta usando el token de sesión
+  Future<Map<String, dynamic>> borrarCuenta() async {
+    try {
+      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+      if (token == null) return {'exito': false, 'mensaje': 'No hay sesión activa'};
+
+      final url = Uri.parse('$_baseUrl/borrar-cuenta');
+      final respuesta = await http.delete(
+        url,
+        // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      if (respuesta.statusCode == 200) {
+        await cerrarSesion(); // Si se borró en el server, borramos el token del celular
+        return {'exito': true};
+      } else {
+        final datos = jsonDecode(respuesta.body);
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error al borrar cuenta'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  Future<String?> obtenerUsuarioActual() async {
+  return await _almacenamientoSeguro.read(key: 'usuario_actual');
+}
+  
+}
+</file>
+
 <file path="lib/ui/panel_controles.dart">
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7400,6 +7302,257 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
                     fontWeight: FontWeight.bold, 
                     color: widget.esAncla ? Colors.white : Colors.black87
                   )
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+</file>
+
+<file path="lib/ui/pantalla_seleccion_mapas.dart">
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/capa_zonas.dart';
+import 'package:jueguito/tablero.dart';
+import 'package:jueguito/juego_bloc.dart';
+import 'package:jueguito/ui/pantalla_tablero.dart';
+
+// --- Imports de Autenticación y BLoC Global ---
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_event.dart';
+import 'package:jueguito/auth_state.dart';
+import 'package:jueguito/servicios/servicio_auth.dart';
+
+class DatosMapa {
+  final String titulo;
+  final String descripcion;
+  final TipoMapa tipo;
+  final String rutaImagen;
+
+  DatosMapa(this.titulo, this.descripcion, this.tipo, this.rutaImagen);
+}
+
+class PantallaSeleccionMapas extends StatefulWidget {
+  const PantallaSeleccionMapas({super.key});
+
+  @override
+  State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
+}
+
+class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+
+  final List<DatosMapa> _mapas = [
+    DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
+    DatosMapa('Mapa 2', 'Nivel 2', TipoMapa.mapa2, 'assets/mapas/mapa2.png'),
+    DatosMapa('Mapa 3', 'Nivel 3', TipoMapa.mapa3, 'assets/mapas/mapa3.png'),
+    DatosMapa('Mapa 4', 'Nivel 4', TipoMapa.mapa4, 'assets/mapas/mapa4.png'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  void _seleccionarMapa(BuildContext context, TipoMapa tipo) {
+    final tableroSeleccionado = Tablero(CapaZonas(tipo));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BlocProvider(
+          create: (context) => JuegoBloc(tableroSeleccionado),
+          child: const PantallaTablero(),
+        ),
+      ),
+    );
+  }
+
+  void _cerrarSesion() {
+    // Le avisamos al BLoC Global y él nos manda al Login automáticamente
+    context.read<AuthBloc>().add(CerrarSesionEvent());
+  }
+
+  void _confirmarBorrarCuenta() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Borrar cuenta?'),
+        content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context); 
+              
+              final resultado = await ServicioAuth().borrarCuenta();
+              
+              if (mounted) {
+                if (resultado['exito'] == true) {
+                  // Si se borró en el server, mandamos el evento al BLoC para limpiar sesión y salir
+                  context.read<AuthBloc>().add(CerrarSesionEvent());
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cuenta eliminada correctamente'), backgroundColor: Colors.green),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(resultado['mensaje']), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            child: const Text('Sí, borrar mi cuenta'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blueGrey[900], 
+      appBar: AppBar(
+        backgroundColor: Colors.blueGrey[900], 
+        foregroundColor: Colors.white, 
+        elevation: 0, 
+        // 1. TÍTULO INTELIGENTE SEGÚN EL ESTADO
+        title: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAutenticado) {
+              return Text('Hola, ${state.usuario}', style: const TextStyle(fontWeight: FontWeight.bold));
+            }
+            return const Text('Modo Invitado', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey));
+          },
+        ),
+        centerTitle: true,
+        actions: [
+          // 2. MENÚ DE OPCIONES INTELIGENTE
+          BlocBuilder<AuthBloc, AuthState>(
+            builder: (context, state) {
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.person, color: Colors.white),
+                onSelected: (value) {
+                  if (value == 'cerrar_sesion') _cerrarSesion();
+                  else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+                },
+                itemBuilder: (BuildContext context) => [
+                  // Solo mostramos "Borrar Cuenta" si el usuario SÍ está autenticado (no invitado)
+                  if (state is AuthAutenticado) ...[
+                    const PopupMenuItem(
+                      value: 'borrar_cuenta',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_forever, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  // El botón de salir siempre se muestra, pero cambia de nombre si es invitado
+                  PopupMenuItem(
+                    value: 'cerrar_sesion',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.logout, color: Colors.black54),
+                        const SizedBox(width: 8),
+                        Text(state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión'),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16.0),
+        itemCount: _mapas.length,
+        itemBuilder: (context, index) {
+          final mapa = _mapas[index];
+
+          final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
+            CurvedAnimation(
+              parent: _animController,
+              curve: Interval(
+                index * 0.2, 
+                1.0,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
+          );
+
+          return SlideTransition(
+            position: animacionEntrada,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: InkWell(
+                onTap: () => _seleccionarMapa(context, mapa.tipo),
+                borderRadius: BorderRadius.circular(16),
+                child: Ink(
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey[800], 
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                        child: Image.asset(
+                          mapa.rutaImagen,
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 120,
+                            height: 120,
+                            color: Colors.blueGrey[700], 
+                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              mapa.titulo,
+                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              mapa.descripcion,
+                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
+                      const SizedBox(width: 12),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -8399,10 +8552,22 @@ flutter:
 
 <file path="lib/main.dart">
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_event.dart';
+import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/ui/pantalla_carga.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
+import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 
 void main() {
-  runApp(const MiJuegoApp());
+  runApp(
+    // Inyectamos el AuthBloc desde la raíz de la app
+    BlocProvider(
+      create: (context) => AuthBloc()..add(VerificarSesion()),
+      child: const MiJuegoApp(),
+    ),
+  );
 }
 
 class MiJuegoApp extends StatelessWidget {
@@ -8412,10 +8577,19 @@ class MiJuegoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Jueguito 7x7',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue)),
+      // BlocBuilder escucha los cambios de sesión y redibuja toda la app
+      home: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          if (state is AuthInicial) {
+            return const PantallaCarga(); // Muestra el logo mientras revisa el token
+          } else if (state is AuthAutenticado || state is AuthInvitado) {
+            return const PantallaSeleccionMapas(); // Va directo al juego
+          } else {
+            return const PantallaLogin(); // Va al login
+          }
+        },
       ),
-      home: const PantallaCarga(),
     );
   }
 }

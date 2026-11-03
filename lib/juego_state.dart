@@ -9,11 +9,13 @@ abstract class JuegoState {
 class JuegoEsperandoIniciales extends JuegoState {
   final int numerosColocados;
   final int numerosRequeridos;
+  final String? mensajeAlerta;
 
   JuegoEsperandoIniciales(
     super.tablero, {
     required this.numerosColocados,
     this.numerosRequeridos = 6,
+    this.mensajeAlerta,
   });
 }
 
