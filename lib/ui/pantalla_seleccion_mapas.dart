@@ -4,6 +4,7 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
+import 'package:jueguito/ui/pantalla_lobby.dart';
 
 // --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
@@ -135,8 +136,11 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.person, color: Colors.white),
                 onSelected: (value) {
-                  if (value == 'cerrar_sesion') _cerrarSesion();
-                  else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+                  if (value == 'cerrar_sesion') {
+                    _cerrarSesion();
+                  } else if (value == 'borrar_cuenta') {
+                    _confirmarBorrarCuenta();
+                  }
                 },
                 itemBuilder: (BuildContext context) => [
                   // Solo mostramos "Borrar Cuenta" si el usuario SÍ está autenticado (no invitado)
@@ -243,6 +247,18 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFE30059), // Rosa Brilliant
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.wifi),
+        label: const Text('Multijugador'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PantallaLobby()),
+          );
+        },
+      ), 
     );
   }
 }

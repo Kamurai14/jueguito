@@ -2,15 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ServicioAuth {
- // Cambia a 'true' cuando subas tu servidor a internet
-  final bool _esProduccion = false; 
+ final bool _esProduccion = false; 
   
-  // En desarrollo usamos localhost (o la IP de tu PC), en producción tu dominio seguro
-  String get _baseUrl => _esProduccion 
-      ? 'https://api.tujuego.com' // Aquí irá tu URL real con HTTPS
-      : 'http://localhost:8080';
+  // URL dinámica para que funcione tanto en Windows como en el Emulador Android
+  String get _baseUrl {
+    if (_esProduccion) return 'https://api.tujuego.com';
+    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:8080'; // Ruta especial para emulador
+    return 'http://127.0.0.1:8080'; // Ruta para escritorio Windows
+  }
 
   final _almacenamientoSeguro = const FlutterSecureStorage();
 
@@ -61,7 +64,9 @@ class ServicioAuth {
         return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
       }
     } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+      print('=== ERROR EN FLUTTER ===');
+      print(e);
+      return {'exito': false, 'mensaje': 'Fallo interno: $e'};
     }
   }
 
