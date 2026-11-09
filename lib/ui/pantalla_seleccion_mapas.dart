@@ -4,7 +4,6 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
-import 'package:jueguito/ui/pantalla_lobby.dart';
 
 // --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
@@ -22,7 +21,8 @@ class DatosMapa {
 }
 
 class PantallaSeleccionMapas extends StatefulWidget {
-  const PantallaSeleccionMapas({super.key});
+  final bool modoMultijugador;
+  const PantallaSeleccionMapas({super.key, this.modoMultijugador = false});
 
   @override
   State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
@@ -244,18 +244,6 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                 ),
               ),
             ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFE30059), // Rosa Brilliant
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.wifi),
-        label: const Text('Multijugador'),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const PantallaLobby()),
           );
         },
       ), 

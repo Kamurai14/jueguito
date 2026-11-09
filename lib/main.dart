@@ -6,6 +6,7 @@ import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/ui/pantalla_carga.dart';
 import 'package:jueguito/ui/pantalla_login.dart';
 import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
+import 'package:jueguito/ui/pantalla_menu_principal.dart';
 
 void main() {
   runApp(
@@ -31,7 +32,7 @@ class MiJuegoApp extends StatelessWidget {
           if (state is AuthInicial) {
             return const PantallaCarga(); // Muestra el logo mientras revisa el token
           } else if (state is AuthAutenticado || state is AuthInvitado) {
-            return const PantallaSeleccionMapas(); // Va directo al juego
+            return const PantallaMenuPrincipal();
           } else {
             return const PantallaLogin(); // Va al login
           }

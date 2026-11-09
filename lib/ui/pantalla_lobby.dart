@@ -25,6 +25,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   // VARIABLES MULTIJUGADOR
   bool _esAnfitrion = false;
   List<String> _jugadores = [];
+  bool _saliendoVoluntariamente = false; // Para saber si cerramos el socket nosotros// Para evitar mostrar el mensaje de desconexión al ir al juego
 
   @override
   void initState() {
@@ -34,6 +35,10 @@ class _PantallaLobbyState extends State<PantallaLobby> {
 
   Future<void> _iniciarConexion() async {
     final exito = await _servicio.conectar();
+    
+    // FIX 1: Si el usuario le dio "Atrás" y la pantalla ya se cerró, abortamos de inmediato.
+    if (!mounted) return; 
+
     if (exito) {
       setState(() {
         _conectando = false;
@@ -42,15 +47,15 @@ class _PantallaLobbyState extends State<PantallaLobby> {
       _escucharServidor();
     } else {
       setState(() {
+        _conectando = false; // FIX 2: Ocultar la bolita de carga si la conexión falla.
         _estado = 'Error de conexión. Verifica tu internet o servidor.';
       });
     }
   }
-
+  // BANDERITA NUEVA: Para saber si cerramos el socket nosotros a propósito
   void _escucharServidor() {
     _servicio.streamMensajes?.listen((mensaje) {
       final datos = jsonDecode(mensaje);
-      
       if (!mounted) return;
 
       setState(() {
@@ -84,10 +89,18 @@ class _PantallaLobbyState extends State<PantallaLobby> {
             break;
             
           case 'partida_lista':
-           Navigator.of(context).pushReplacement(
+            _saliendoVoluntariamente = true; 
+            
+            final nombreMapa = datos['mapa'] ?? 'mapa1';
+            TipoMapa mapaElegido = TipoMapa.values.firstWhere(
+              (m) => m.name == nombreMapa, 
+              orElse: () => TipoMapa.mapa1
+            );
+            
+            Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (context) => BlocProvider(
-                  create: (context) => JuegoBloc(Tablero(CapaZonas(TipoMapa.mapa1)), servicioRed: _servicio),
+                  create: (context) => JuegoBloc(Tablero(CapaZonas(mapaElegido)), servicioRed: _servicio),
                   child: const PantallaTablero(),
                 ),
               ),
@@ -102,20 +115,42 @@ class _PantallaLobbyState extends State<PantallaLobby> {
 
   @override
   void dispose() {
-    _servicio.desconectar();
+    // Si nos salimos al menú principal o cerramos la pantalla de golpe:
+    if (!_saliendoVoluntariamente) {
+      // Forzamos el cierre de la suscripción y socket de forma segura
+      try {
+        _servicio.desconectar();
+      } catch (_) {}
+    }
     _codigoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F5EE),
-      appBar: AppBar(
-        title: const Text('Lobby Multijugador'),
-        backgroundColor: const Color(0xFF0055A4),
-        foregroundColor: Colors.white,
-      ),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        // Activamos la bandera al presionar atrás para limpiar bien el socket
+        _saliendoVoluntariamente = true;
+        _servicio.desconectar();
+      },
+    child: Scaffold(
+        backgroundColor: const Color(0xFFF8F5EE),
+        appBar: AppBar(
+          title: const Text('Lobby Multijugador'),
+          backgroundColor: const Color(0xFF0055A4),
+          foregroundColor: Colors.white,
+          // Si pones el botón de atrás manual, asegúrate de marcar la bandera:
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              _saliendoVoluntariamente = true;
+              _servicio.desconectar();
+              Navigator.pop(context);
+            },
+          ),
+        ),
       body: Center(
         child: _conectando 
           ? Column(
@@ -133,6 +168,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                   : _buildSalaDeEspera(),
             ),
       ),
+    )
     );
   }
 

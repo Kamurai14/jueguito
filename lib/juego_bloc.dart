@@ -7,6 +7,7 @@ import 'package:jueguito/juego_state.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/motor_reglas.dart';
 import 'package:jueguito/servicios/servicio_multiplayer.dart';
+import 'dart:convert';
 
 class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   final Random _random;
@@ -20,7 +21,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     // Si estamos en multijugador, conectamos el oído del BLoC al servidor
     if (servicioRed != null && servicioRed!.streamMensajes != null) {
       _suscripcionRed = servicioRed!.streamMensajes!.listen((mensajeStr) {
-        import 'dart:convert';
         add(RecibirMensajeServidor(jsonDecode(mensajeStr)));
       });
     }
