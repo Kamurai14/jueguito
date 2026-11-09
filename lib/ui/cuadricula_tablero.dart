@@ -45,7 +45,7 @@ class CuadriculaTablero extends StatelessWidget {
             }
 
             return GestureDetector(
-              key: Key('casilla_${x}_${y}'),
+              key: Key('casilla_${x}_$y'),
               onTap: () {
                 if (state is JuegoEnProgreso) {
                   // Casteo local para la lógica de validación del clic
@@ -86,25 +86,33 @@ class CuadriculaTablero extends StatelessWidget {
                   if (mostrarBrilloInicial) {
                     colorBorde = Colors.yellowAccent;
                     anchoBorde = 3.0;
-                    sombras = [BoxShadow(color: Colors.yellowAccent.withOpacity(0.8), blurRadius: 10, spreadRadius: 2)];
+                    sombras = [BoxShadow(color: Colors.yellowAccent.withValues(alpha: 0.8), blurRadius: 10, spreadRadius: 2)];
                   } else if (esSugerencia) {
                     colorBorde = Color.lerp(Colors.greenAccent, Colors.green[900], animController.value)!;
                     anchoBorde = 3.0;
                     sombras = [
                       BoxShadow(
-                        color: Colors.greenAccent.withOpacity(0.8 * animController.value),
+                        color: Colors.greenAccent.withValues(alpha: 0.8 * animController.value),
                         blurRadius: 15 * animController.value,
                         spreadRadius: 3 * animController.value,
                       )
                     ];
                   }
 
+                // =========================================================
+                  // LEEMOS CUÁNTAS VECES SE HA RECLAMADO ESTA ZONA A NIVEL MUNDIAL
                   // =========================================================
-                  // FIX AQUÍ: Obtenemos el String del ID directamente del tablero
-                  // =========================================================
+                  int vecesReclamada = 0;
+                  String idZonaCasilla = state.tablero.obtenerIdZonaDeCasilla(x, y);
+
+                  if (state is JuegoEnProgreso) {
+                    vecesReclamada = (state as JuegoEnProgreso).estadoZonasGlobal[idZonaCasilla] ?? 0;
+                  }
+
                   return Container(
                     decoration: BoxDecoration(
-                      color: TemaJuego.obtenerColorZona(state.tablero.obtenerIdZonaDeCasilla(x, y)),
+                      // Pasamos el contador de reclamos para atenuar el color
+                      color: TemaJuego.obtenerColorZona(idZonaCasilla, vecesReclamada),
                       border: Border.all(color: colorBorde, width: anchoBorde),
                       boxShadow: sombras,
                     ),
@@ -115,7 +123,10 @@ class CuadriculaTablero extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 24, 
                                 fontWeight: FontWeight.bold,
-                                color: casilla.esInicial ? Colors.black87 : Colors.blue[900],
+                                // Si la zona está muy atenuada, oscurecemos el número para que siga siendo legible
+                                color: casilla.esInicial 
+                                    ? (vecesReclamada >= 2 ? Colors.black45 : Colors.black87) 
+                                    : (vecesReclamada >= 2 ? Colors.blue[900]!.withValues(alpha: 0.5) : Colors.blue[900]),
                               ),
                             )
                           : null,
