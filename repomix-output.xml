@@ -147,12 +147,14 @@ ios/
 lib/
   servicios/
     servicio_auth.dart
+    servicio_multiplayer.dart
   ui/
     cabecera_juego.dart
     cuadricula_tablero.dart
     dialogo_selector.dart
     panel_controles.dart
     pantalla_carga.dart
+    pantalla_lobby.dart
     pantalla_login.dart
     pantalla_seleccion_mapas.dart
     pantalla_tablero.dart
@@ -1766,6 +1768,237 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+</file>
+
+<file path="lib/servicios/servicio_multiplayer.dart">
+import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class ServicioMultiplayer {
+  WebSocketChannel? _canal;
+  final bool _esProduccion = false;
+  final _almacenamientoSeguro = const FlutterSecureStorage();
+
+  // URL dinámica para WebSockets (ws:// en lugar de http://)
+  String get _wsUrl {
+    if (_esProduccion) return 'wss://api.tujuego.com/ws';
+    if (!kIsWeb && Platform.isAndroid) return 'ws://10.0.2.2:8080/ws';
+    return 'ws://127.0.0.1:8080/ws';
+  }
+
+  // Stream expuesto para que la UI reaccione instantáneamente
+  Stream<dynamic>? get streamMensajes => _canal?.stream;
+
+  Future<bool> conectar() async {
+    try {
+      final token = await _almacenamientoSeguro.read(key: 'jwt_token');
+      if (token == null) return false;
+
+      final urlFinal = Uri.parse('$_wsUrl?token=$token');
+      _canal = WebSocketChannel.connect(urlFinal);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void crearSala() {
+    _enviar({'accion': 'crear_sala'});
+  }
+
+  void unirseSala(String codigo) {
+    _enviar({'accion': 'unirse_sala', 'codigo': codigo});
+  }
+
+  void enviarJugada(Map<String, dynamic> datosJugada) {
+    datosJugada['accion'] = 'jugada';
+    _enviar(datosJugada);
+  }
+
+  void rendirse() {
+    _enviar({'accion': 'rendirse'});
+    desconectar();
+  }
+
+  void _enviar(Map<String, dynamic> datos) {
+    if (_canal != null) {
+      _canal!.sink.add(jsonEncode(datos));
+    }
+  }
+
+  void desconectar() {
+    _canal?.sink.close();
+    _canal = null;
+  }
+}
+</file>
+
+<file path="lib/ui/pantalla_lobby.dart">
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:jueguito/servicios/servicio_multiplayer.dart';
+
+class PantallaLobby extends StatefulWidget {
+  const PantallaLobby({super.key});
+
+  @override
+  State<PantallaLobby> createState() => _PantallaLobbyState();
+}
+
+class _PantallaLobbyState extends State<PantallaLobby> {
+  final ServicioMultiplayer _servicio = ServicioMultiplayer();
+  final TextEditingController _codigoController = TextEditingController();
+  
+  bool _conectando = true;
+  String? _codigoGenerado;
+  String _estado = 'Conectando al servidor...';
+
+  @override
+  void initState() {
+    super.initState();
+    _iniciarConexion();
+  }
+
+  Future<void> _iniciarConexion() async {
+    final exito = await _servicio.conectar();
+    if (exito) {
+      setState(() {
+        _conectando = false;
+        _estado = 'Conectado. ¿Qué deseas hacer?';
+      });
+      _escucharServidor();
+    } else {
+      setState(() {
+        _estado = 'Error de conexión. Verifica tu internet o servidor.';
+      });
+    }
+  }
+
+  void _escucharServidor() {
+    _servicio.streamMensajes?.listen((mensaje) {
+      final datos = jsonDecode(mensaje);
+      
+      switch (datos['tipo']) {
+        case 'sala_creada':
+          setState(() => _codigoGenerado = datos['codigo']);
+          break;
+        case 'error':
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(datos['mensaje']), backgroundColor: Colors.red),
+          );
+          break;
+        case 'partida_lista':
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('¡Partida encontrada contra ${datos['rival']}!'), backgroundColor: Colors.green),
+          );
+          // TODO: Fase 4 - Aquí navegaremos al Tablero Multijugador inyectando el servicio de red
+          break;
+      }
+    }, onDone: () {
+      if (mounted) setState(() => _estado = 'Desconectado del servidor.');
+    });
+  }
+
+  @override
+  void dispose() {
+    _servicio.desconectar();
+    _codigoController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F5EE),
+      appBar: AppBar(
+        title: const Text('Lobby Multijugador'),
+        backgroundColor: const Color(0xFF0055A4), // Azul del tema
+        foregroundColor: Colors.white,
+      ),
+      body: Center(
+        child: _conectando 
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: Color(0xFFFF6B00)),
+                const SizedBox(height: 20),
+                Text(_estado, style: const TextStyle(fontSize: 18)),
+              ],
+            )
+          : Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_codigoGenerado == null) ...[
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text('Crear Sala Nueva', style: TextStyle(fontSize: 18)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0055A4),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 60),
+                      ),
+                      onPressed: () => _servicio.crearSala(),
+                    ),
+                    const SizedBox(height: 40),
+                    const Text('O únete a una existente:', style: TextStyle(fontSize: 16)),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _codigoController,
+                      textCapitalization: TextCapitalization.characters,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 5),
+                      decoration: const InputDecoration(
+                        labelText: 'CÓDIGO DE SALA',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.meeting_room),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF6B00), // Naranja brillante
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 60),
+                      ),
+                      onPressed: () {
+                        if (_codigoController.text.trim().isNotEmpty) {
+                          _servicio.unirseSala(_codigoController.text.trim());
+                        }
+                      },
+                      child: const Text('Unirse a Partida', style: TextStyle(fontSize: 18)),
+                    ),
+                  ] else ...[
+                    const Text('Código de Invitación:', style: TextStyle(fontSize: 20)),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF0055A4), width: 2),
+                      ),
+                      child: Text(
+                        _codigoGenerado!,
+                        style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, letterSpacing: 5),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    const CircularProgressIndicator(color: Color(0xFFE30059)),
+                    const SizedBox(height: 20),
+                    const Text('Esperando a que se una el rival...', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  ]
+                ],
+              ),
+            ),
+      ),
+    );
+  }
+}
 </file>
 
 <file path="lib/utils/validador_auth.dart">
@@ -5666,100 +5899,6 @@ class TemaJuego {
 }
 </file>
 
-<file path="lib/motor_reglas.dart">
-import 'package:jueguito/capa_zonas.dart';
-
-class MotorReglas {
-  
-  // ==========================================================
-  // 1. VALIDACIÓN DE JUGADAS (El nuevo cerebro del juego)
-  // Reemplaza a tu antiguo archivo tipo.dart
-  // ==========================================================
-  static bool esJugadaValida(String idZona, int numeroAColocar, List<int> numerosActualesEnZona) {
-    
-    // REGLAS AZUL (AZ) y BLANCO (BL): Todos los números deben ser iguales al primero
-    if (idZona.startsWith('AZ') || idZona.startsWith('BL')) {
-      if (numerosActualesEnZona.isNotEmpty) {
-        return numeroAColocar == numerosActualesEnZona.first;
-      }
-      return true; // Si está vacía, el primer número siempre entra
-    }
-
-    // REGLA MORADA (MO): Solo puede tener un máximo de 2 números diferentes por zona
-    if (idZona.startsWith('MO')) {
-      // Obtenemos cuántos números "diferentes" hay actualmente en la zona
-      Set<int> numerosUnicos = numerosActualesEnZona.toSet();
-      
-      // Si el número que queremos poner ya existe en la zona, es válido repetirlo
-      if (numerosUnicos.contains(numeroAColocar)) {
-        return true;
-      }
-      // Si es un número nuevo, solo lo dejamos entrar si hay menos de 2 números únicos
-      return numerosUnicos.length < 2;
-    }
-
-    // REGLA NARANJA (NA): El rango (1-3 o 4-6) se define por el primer número colocado
-    if (idZona.startsWith('NA')) {
-      if (numerosActualesEnZona.isEmpty) {
-        return true; // Si está vacía, acepta cualquier número
-      }
-      
-      // Checamos cuál fue el primer número que entró para definir el rango
-      int primerNumero = numerosActualesEnZona.first;
-      if (primerNumero <= 3) {
-        return numeroAColocar >= 1 && numeroAColocar <= 3;
-      } else {
-        return numeroAColocar >= 4 && numeroAColocar <= 6;
-      }
-    }
-
-    // REGLA VERDE (VE): Cualquier número es válido, se pueden repetir sin límite
-    if (idZona.startsWith('VE')) {
-      return true;
-    }
-
-    // REGLAS ROJO (RO) y AMARILLO (AM): Todos los números tienen que ser diferentes
-    if (idZona.startsWith('RO') || idZona.startsWith('AM')) {
-      if (numerosActualesEnZona.contains(numeroAColocar)) {
-        return false; // Si ya se usó, lo bloqueamos
-      }
-      return true;
-    }
-
-    // Regla de seguridad por defecto
-    return true; 
-  }
-  // ==========================================================
-  // 2. SISTEMA DE PUNTUACIONES (Preparado para los 4 mapas)
-  // ==========================================================
-  static int obtenerPuntosPrimeraVez(String idZona, {TipoMapa mapaActual = TipoMapa.mapa1}) {
-    
-    // Ejemplo de cómo manejaremos los puntos dinámicos que me mencionaste.
-    // Cuando el BLoC nos pase que estamos en el Mapa 2, cambiamos los valores:
-    if (mapaActual == TipoMapa.mapa2) {
-      if (idZona.startsWith('AM')) return 6;
-      if (idZona.startsWith('AZ')) return 5;
-      // ... iremos llenando el resto después
-    } else if (mapaActual == TipoMapa.mapa3) {
-      if (idZona.startsWith('AM')) return 7;
-    }
-
-    // Puntuaciones por defecto (Mapa 1 y Mapa 4)
-    if (idZona.startsWith('AM')) return 8; // Amarilla
-    if (idZona.startsWith('AZ')) return 7; // Azul
-    if (idZona.startsWith('RO')) return 6; // Roja
-    if (idZona.startsWith('MO')) return 6; // Morada
-    if (idZona.startsWith('VE')) return 4; // Verde
-    
-    // Puntuaciones base para los colores nuevos (ajústalas según tu diseño de juego)
-    if (idZona.startsWith('BL')) return 5; // Blanca
-    if (idZona.startsWith('NA')) return 6; // Naranja
-
-    return 0;
-  }
-}
-</file>
-
 <file path="linux/flutter/generated_plugin_registrant.cc">
 //
 //  Generated file. Do not edit.
@@ -6044,6 +6183,93 @@ class Coordenada {
 
   @override
   int get hashCode => x.hashCode ^ y.hashCode;
+}
+</file>
+
+<file path="lib/motor_reglas.dart">
+import 'package:jueguito/capa_zonas.dart';
+
+class MotorReglas {
+  
+  // ==========================================================
+  // 1. VALIDACIÓN DE JUGADAS (El nuevo cerebro del juego)
+  // Reemplaza a tu antiguo archivo tipo.dart
+  // ==========================================================
+  static bool esJugadaValida(String idZona, int numeroAColocar, List<int> numerosActualesEnZona) {
+    
+    // REGLAS AZUL (AZ) y BLANCO (BL): Todos los números deben ser iguales al primero
+    if (idZona.startsWith('AZ') || idZona.startsWith('BL')) {
+      if (numerosActualesEnZona.isNotEmpty) {
+        return numeroAColocar == numerosActualesEnZona.first;
+      }
+      return true; // Si está vacía, el primer número siempre entra
+    }
+
+    // REGLA MORADA (MO): Solo puede tener un máximo de 2 números diferentes por zona
+    if (idZona.startsWith('MO')) {
+      // Obtenemos cuántos números "diferentes" hay actualmente en la zona
+      Set<int> numerosUnicos = numerosActualesEnZona.toSet();
+      
+      // Si el número que queremos poner ya existe en la zona, es válido repetirlo
+      if (numerosUnicos.contains(numeroAColocar)) {
+        return true;
+      }
+      // Si es un número nuevo, solo lo dejamos entrar si hay menos de 2 números únicos
+      return numerosUnicos.length < 2;
+    }
+
+    // REGLA NARANJA (NA): Arriba (NA1) solo 4-6, Abajo (NA2) solo 1-3
+    if (idZona == 'NA1') {
+      return numeroAColocar >= 4 && numeroAColocar <= 6;
+    }
+    if (idZona == 'NA2') {
+      return numeroAColocar >= 1 && numeroAColocar <= 3;
+    }
+
+    // REGLA VERDE (VE): Cualquier número es válido, se pueden repetir sin límite
+    if (idZona.startsWith('VE')) {
+      return true;
+    }
+
+    // REGLAS ROJO (RO) y AMARILLO (AM): Todos los números tienen que ser diferentes
+    if (idZona.startsWith('RO') || idZona.startsWith('AM')) {
+      if (numerosActualesEnZona.contains(numeroAColocar)) {
+        return false; // Si ya se usó, lo bloqueamos
+      }
+      return true;
+    }
+
+    // Regla de seguridad por defecto
+    return true; 
+  }
+  // ==========================================================
+  // 2. SISTEMA DE PUNTUACIONES (Preparado para los 4 mapas)
+  // ==========================================================
+  static int obtenerPuntosPrimeraVez(String idZona, {TipoMapa mapaActual = TipoMapa.mapa1}) {
+    
+    // Ejemplo de cómo manejaremos los puntos dinámicos que me mencionaste.
+    // Cuando el BLoC nos pase que estamos en el Mapa 2, cambiamos los valores:
+    if (mapaActual == TipoMapa.mapa2) {
+      if (idZona.startsWith('AM')) return 6;
+      if (idZona.startsWith('AZ')) return 5;
+      // ... iremos llenando el resto después
+    } else if (mapaActual == TipoMapa.mapa3) {
+      if (idZona.startsWith('AM')) return 7;
+    }
+
+    // Puntuaciones por defecto (Mapa 1 y Mapa 4)
+    if (idZona.startsWith('AM')) return 8; // Amarilla
+    if (idZona.startsWith('AZ')) return 7; // Azul
+    if (idZona.startsWith('RO')) return 6; // Roja
+    if (idZona.startsWith('MO')) return 6; // Morada
+    if (idZona.startsWith('VE')) return 4; // Verde
+    
+    // Puntuaciones base para los colores nuevos (ajústalas según tu diseño de juego)
+    if (idZona.startsWith('BL')) return 5; // Blanca
+    if (idZona.startsWith('NA')) return 6; // Naranja
+
+    return 0;
+  }
 }
 </file>
 
@@ -6661,63 +6887,6 @@ class ColocarJugada extends JuegoEvent {
 class PasarTurno extends JuegoEvent {}
 </file>
 
-<file path="lib/juego_state.dart">
-import 'package:jueguito/tablero.dart';
-
-abstract class JuegoState {
-  final Tablero tablero;
-  JuegoState(this.tablero);
-}
-
-// El candado está cerrado. El juego espera los 6 números.
-class JuegoEsperandoIniciales extends JuegoState {
-  final int numerosColocados;
-  final int numerosRequeridos;
-
-  JuegoEsperandoIniciales(
-    super.tablero, {
-    required this.numerosColocados,
-    this.numerosRequeridos = 6,
-  });
-}
-
-// El candado está abierto. El jugador ya puede jugar.
-class JuegoActivo extends JuegoState {
-  JuegoActivo(super.tablero);
-}
-
-// Opcional: Para mostrar un mensaje si la jugada fue inválida
-class JugadaInvalida extends JuegoActivo {
-  final String mensaje;
-  JugadaInvalida(super.tablero, this.mensaje);
-}
-
-class JuegoEnProgreso extends JuegoState {
-  final int dado1;
-  final int dado2;
-  final int? anclaSeleccionada;
-  final int? numeroAColocar;
-  final int idTirada;
-  
-  // Novedades: Puntuación y zonas completadas
-  final int puntuacion;
-  final Set<String> zonasCompletadas;
-  final String? mensajeAlerta; // Para mostrar el SnackBar
-
-  JuegoEnProgreso(
-    super.tablero, {
-    required this.dado1,
-    required this.dado2,
-    required this.idTirada,
-    this.anclaSeleccionada,
-    this.numeroAColocar,
-    this.puntuacion = 0, // Inicia en 0 por defecto
-    this.zonasCompletadas = const {}, // Inicia vacío
-    this.mensajeAlerta,
-  });
-}
-</file>
-
 <file path="test/camino_feliz_test.dart">
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -6993,121 +7162,6 @@ Future<void> _jugarHastaPuntuar(WidgetTester tester, JuegoBloc blocReal) async {
 }
 </file>
 
-<file path="lib/servicios/servicio_auth.dart">
-import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-class ServicioAuth {
- // Cambia a 'true' cuando subas tu servidor a internet
-  final bool _esProduccion = false; 
-  
-  // En desarrollo usamos localhost (o la IP de tu PC), en producción tu dominio seguro
-  String get _baseUrl => _esProduccion 
-      ? 'https://api.tujuego.com' // Aquí irá tu URL real con HTTPS
-      : 'http://localhost:8080';
-
-  final _almacenamientoSeguro = const FlutterSecureStorage();
-
-  // Función para registrar usuario
-  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
-    try {
-      final url = Uri.parse('$_baseUrl/registro');
-      final respuesta = await http.post(
-        url,
-        body: jsonEncode({'usuario': usuario, 'password': password}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
-      );
-      
-      final datos = jsonDecode(respuesta.body);
-      
-      if (respuesta.statusCode == 200) {
-        return {'exito': true, 'mensaje': datos['mensaje']};
-      } else {
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-
-  // Función para iniciar sesión y GUARDAR el token
-  Future<Map<String, dynamic>> login(String usuario, String password) async {
-    try {
-      final url = Uri.parse('$_baseUrl/login');
-      final respuesta = await http.post(
-        url,
-        body: jsonEncode({'usuario': usuario, 'password': password}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
-      );
-      
-      final datos = jsonDecode(respuesta.body);
-      
-      if (respuesta.statusCode == 200) {
-        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
-        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
-        await _almacenamientoSeguro.write(key: 'usuario_actual', value: usuario);
-        return {'exito': true, 'token': datos['token']};
-      } else {
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-
-  // Verifica si hay un token guardado en el teléfono
-  Future<bool> tieneSesionActiva() async {
-    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
-    return token != null;
-  }
-
-  // Borra el token (Para el botón de Cerrar Sesión)
-  Future<void> cerrarSesion() async {
-    await _almacenamientoSeguro.delete(key: 'jwt_token');
-    await _almacenamientoSeguro.delete(key: 'usuario_actual');
-  }
-
-  // Pide al servidor borrar la cuenta usando el token de sesión
-  Future<Map<String, dynamic>> borrarCuenta() async {
-    try {
-      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
-      if (token == null) return {'exito': false, 'mensaje': 'No hay sesión activa'};
-
-      final url = Uri.parse('$_baseUrl/borrar-cuenta');
-      final respuesta = await http.delete(
-        url,
-        // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
-        headers: {'Authorization': 'Bearer $token'},
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
-      );
-      
-      if (respuesta.statusCode == 200) {
-        await cerrarSesion(); // Si se borró en el server, borramos el token del celular
-        return {'exito': true};
-      } else {
-        final datos = jsonDecode(respuesta.body);
-        return {'exito': false, 'mensaje': datos['error'] ?? 'Error al borrar cuenta'};
-      }
-    } catch (e) {
-      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
-    }
-  }
-
-  Future<String?> obtenerUsuarioActual() async {
-  return await _almacenamientoSeguro.read(key: 'usuario_actual');
-}
-  
-}
-</file>
-
 <file path="lib/ui/panel_controles.dart">
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7313,6 +7367,185 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
 }
 </file>
 
+<file path="lib/juego_state.dart">
+import 'package:jueguito/tablero.dart';
+
+abstract class JuegoState {
+  final Tablero tablero;
+  JuegoState(this.tablero);
+}
+
+// El candado está cerrado. El juego espera los 6 números.
+class JuegoEsperandoIniciales extends JuegoState {
+  final int numerosColocados;
+  final int numerosRequeridos;
+  final String? mensajeAlerta;
+
+  JuegoEsperandoIniciales(
+    super.tablero, {
+    required this.numerosColocados,
+    this.numerosRequeridos = 6,
+    this.mensajeAlerta,
+  });
+}
+
+// El candado está abierto. El jugador ya puede jugar.
+class JuegoActivo extends JuegoState {
+  JuegoActivo(super.tablero);
+}
+
+// Opcional: Para mostrar un mensaje si la jugada fue inválida
+class JugadaInvalida extends JuegoActivo {
+  final String mensaje;
+  JugadaInvalida(super.tablero, this.mensaje);
+}
+
+class JuegoEnProgreso extends JuegoState {
+  final int dado1;
+  final int dado2;
+  final int? anclaSeleccionada;
+  final int? numeroAColocar;
+  final int idTirada;
+  
+  // Novedades: Puntuación y zonas completadas
+  final int puntuacion;
+  final Set<String> zonasCompletadas;
+  final String? mensajeAlerta; // Para mostrar el SnackBar
+
+  JuegoEnProgreso(
+    super.tablero, {
+    required this.dado1,
+    required this.dado2,
+    required this.idTirada,
+    this.anclaSeleccionada,
+    this.numeroAColocar,
+    this.puntuacion = 0, // Inicia en 0 por defecto
+    this.zonasCompletadas = const {}, // Inicia vacío
+    this.mensajeAlerta,
+  });
+}
+</file>
+
+<file path="lib/servicios/servicio_auth.dart">
+import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+class ServicioAuth {
+ final bool _esProduccion = false; 
+  
+  // URL dinámica para que funcione tanto en Windows como en el Emulador Android
+  String get _baseUrl {
+    if (_esProduccion) return 'https://api.tujuego.com';
+    if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:8080'; // Ruta especial para emulador
+    return 'http://127.0.0.1:8080'; // Ruta para escritorio Windows
+  }
+
+  final _almacenamientoSeguro = const FlutterSecureStorage();
+
+  // Función para registrar usuario
+  Future<Map<String, dynamic>> registrar(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/registro');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        return {'exito': true, 'mensaje': datos['mensaje']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error desconocido'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  // Función para iniciar sesión y GUARDAR el token
+  Future<Map<String, dynamic>> login(String usuario, String password) async {
+    try {
+      final url = Uri.parse('$_baseUrl/login');
+      final respuesta = await http.post(
+        url,
+        body: jsonEncode({'usuario': usuario, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      final datos = jsonDecode(respuesta.body);
+      
+      if (respuesta.statusCode == 200) {
+        // ¡Aquí guardamos el token de forma encriptada en el dispositivo!
+        await _almacenamientoSeguro.write(key: 'jwt_token', value: datos['token']);
+        await _almacenamientoSeguro.write(key: 'usuario_actual', value: usuario);
+        return {'exito': true, 'token': datos['token']};
+      } else {
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Credenciales inválidas'};
+      }
+    } catch (e) {
+      print('=== ERROR EN FLUTTER ===');
+      print(e);
+      return {'exito': false, 'mensaje': 'Fallo interno: $e'};
+    }
+  }
+
+  // Verifica si hay un token guardado en el teléfono
+  Future<bool> tieneSesionActiva() async {
+    String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+    return token != null;
+  }
+
+  // Borra el token (Para el botón de Cerrar Sesión)
+  Future<void> cerrarSesion() async {
+    await _almacenamientoSeguro.delete(key: 'jwt_token');
+    await _almacenamientoSeguro.delete(key: 'usuario_actual');
+  }
+
+  // Pide al servidor borrar la cuenta usando el token de sesión
+  Future<Map<String, dynamic>> borrarCuenta() async {
+    try {
+      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+      if (token == null) return {'exito': false, 'mensaje': 'No hay sesión activa'};
+
+      final url = Uri.parse('$_baseUrl/borrar-cuenta');
+      final respuesta = await http.delete(
+        url,
+        // Aquí le enviamos el token al servidor como si fuera un "gafete" de identidad
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+      
+      if (respuesta.statusCode == 200) {
+        await cerrarSesion(); // Si se borró en el server, borramos el token del celular
+        return {'exito': true};
+      } else {
+        final datos = jsonDecode(respuesta.body);
+        return {'exito': false, 'mensaje': datos['error'] ?? 'Error al borrar cuenta'};
+      }
+    } catch (e) {
+      return {'exito': false, 'mensaje': 'Error de conexión con el servidor'};
+    }
+  }
+
+  Future<String?> obtenerUsuarioActual() async {
+  return await _almacenamientoSeguro.read(key: 'usuario_actual');
+}
+  
+}
+</file>
+
 <file path="lib/ui/pantalla_seleccion_mapas.dart">
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7320,6 +7553,7 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
+import 'package:jueguito/ui/pantalla_lobby.dart';
 
 // --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
@@ -7451,8 +7685,11 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.person, color: Colors.white),
                 onSelected: (value) {
-                  if (value == 'cerrar_sesion') _cerrarSesion();
-                  else if (value == 'borrar_cuenta') _confirmarBorrarCuenta();
+                  if (value == 'cerrar_sesion') {
+                    _cerrarSesion();
+                  } else if (value == 'borrar_cuenta') {
+                    _confirmarBorrarCuenta();
+                  }
                 },
                 itemBuilder: (BuildContext context) => [
                   // Solo mostramos "Borrar Cuenta" si el usuario SÍ está autenticado (no invitado)
@@ -7559,6 +7796,18 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
           );
         },
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFE30059), // Rosa Brilliant
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.wifi),
+        label: const Text('Multijugador'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PantallaLobby()),
+          );
+        },
+      ), 
     );
   }
 }
@@ -8472,7 +8721,7 @@ packages:
     source: hosted
     version: "1.0.1"
   web_socket_channel:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: web_socket_channel
       sha256: d645757fb0f4773d602444000a8131ff5d48c9e47adfe9772652dd1a4f2d45c8
@@ -8535,6 +8784,7 @@ dependencies:
   audioplayers: ^6.7.1
   http: ^1.6.0
   flutter_secure_storage: ^9.2.2
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   lints: ^6.0.0
@@ -8762,6 +9012,61 @@ class Tablero {
     }
     return true; 
   }
+
+  String? validarColocacionInicial(int xDestino, int yDestino, int numero) {
+    String idZonaDestino = obtenerIdZonaDeCasilla(xDestino, yDestino);
+
+    // 1. Regla estricta de zonas Naranjas
+    if (idZonaDestino == 'NA1' && (numero < 4 || numero > 6)) {
+      return 'La zona superior solo acepta 4, 5 o 6.';
+    }
+    if (idZonaDestino == 'NA2' && (numero < 1 || numero > 3)) {
+      return 'La zona inferior solo acepta 1, 2 o 3.';
+    }
+
+    // 2. Sistema de "Reserva" (Evitar que se ahorque en el medio)
+    if (idZonaDestino != 'NA1' && idZonaDestino != 'NA2') {
+      bool na1Ocupada = false;
+      bool na2Ocupada = false;
+      int cantidadPequenosEnMedio = 0; // 1, 2, 3
+      int cantidadGrandesEnMedio = 0;  // 4, 5, 6
+
+      // Escaneamos las casillas iniciales actuales
+      for (int i = 0; i < tamano; i++) {
+        for (int j = 0; j < tamano; j++) {
+          Casilla c = obtenerCasilla(i, j);
+          
+          if (c.esInicial && !c.estaVacia) {
+            // Ignoramos la posición vieja de la pieza si la estamos moviendo
+            if (c.valor == numero) continue;
+
+            String idZona = obtenerIdZonaDeCasilla(i, j);
+            if (idZona == 'NA1') {
+              na1Ocupada = true;
+            } else if (idZona == 'NA2') {
+              na2Ocupada = true;
+            } else {
+              if (c.valor! >= 1 && c.valor! <= 3) cantidadPequenosEnMedio++;
+              if (c.valor! >= 4 && c.valor! <= 6) cantidadGrandesEnMedio++;
+            }
+          }
+        }
+      }
+
+      // Aplicamos el bloqueo si intenta gastar su última pieza vital en el medio
+      if (numero >= 1 && numero <= 3) {
+        if (!na2Ocupada && cantidadPequenosEnMedio >= 2) {
+          return 'Debes reservar este número para la zona naranja inferior.';
+        }
+      } else if (numero >= 4 && numero <= 6) {
+        if (!na1Ocupada && cantidadGrandesEnMedio >= 2) {
+          return 'Debes reservar este número para la zona naranja superior.';
+        }
+      }
+    }
+
+    return null; // Todo en orden, movimiento permitido
+  }
 }
 </file>
 
@@ -8826,6 +9131,19 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                   behavior: SnackBarBehavior.floating,
                 )
               );
+            } else if (state is JuegoEsperandoIniciales &&
+                state.mensajeAlerta != null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state.mensajeAlerta!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  backgroundColor: Colors.redAccent,
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             }
           },
           builder: (context, state) {
@@ -8885,6 +9203,13 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   }
 
   void _onInsertarValorInicial(InsertarValorInicial event, Emitter<JuegoState> emit) {
+    // 1. Validamos antes de insertar
+    String? error = state.tablero.validarColocacionInicial(event.x, event.y, event.valor);
+    if (error != null) {
+      emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: state.tablero.contarNumerosIniciales(), mensajeAlerta: error));
+      return; // Detenemos la jugada
+    }
+    
     Casilla target = state.tablero.obtenerCasilla(event.x, event.y);
     
     if (target.esInicial) {
@@ -8894,6 +9219,13 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   }
 
   void _onMoverValorInicial(MoverValorInicial event, Emitter<JuegoState> emit) {
+    // 1. Validamos antes de mover
+    String? error = state.tablero.validarColocacionInicial(event.xDestino, event.yDestino, event.valor);
+    if (error != null) {
+      emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: state.tablero.contarNumerosIniciales(), mensajeAlerta: error));
+      return; // Detenemos la jugada
+    }
+
     Casilla origen = state.tablero.obtenerCasilla(event.xOrigen, event.yOrigen);
     Casilla destino = state.tablero.obtenerCasilla(event.xDestino, event.yDestino);
     

@@ -51,3 +51,9 @@ class ColocarJugada extends JuegoEvent {
 }
 
 class PasarTurno extends JuegoEvent {}
+
+// NUEVO: Evento para cuando el servidor nos avisa de algo (dados, zonas reclamadas, etc.)
+class RecibirMensajeServidor extends JuegoEvent {
+  final Map<String, dynamic> datos;
+  RecibirMensajeServidor(this.datos);
+}

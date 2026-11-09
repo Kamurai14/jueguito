@@ -40,6 +40,10 @@ class ServicioMultiplayer {
     _enviar({'accion': 'unirse_sala', 'codigo': codigo});
   }
 
+  void iniciarPartida() {
+    _enviar({'accion': 'iniciar_partida'});
+  }
+
   void enviarJugada(Map<String, dynamic> datosJugada) {
     datosJugada['accion'] = 'jugada';
     _enviar(datosJugada);
