@@ -21,7 +21,10 @@ class JuegoEsperandoIniciales extends JuegoState {
 
 // El candado está abierto. El jugador ya puede jugar.
 class JuegoActivo extends JuegoState {
-  JuegoActivo(super.tablero);
+  final int listos;
+  final int total;
+
+  JuegoActivo(super.tablero, {this.listos = 0, this.total = 1});
 }
 
 // Opcional: Para mostrar un mensaje si la jugada fue inválida

@@ -13,8 +13,9 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   final Random _random;
   final ServicioMultiplayer? servicioRed; // El túnel hacia el servidor
   StreamSubscription? _suscripcionRed;    // Para escuchar en tiempo real
+  final bool esAnfitrion;
 
-  JuegoBloc(Tablero tablero, {Random? generadorRandom, this.servicioRed}) 
+  JuegoBloc(Tablero tablero, {Random? generadorRandom, this.servicioRed, this.esAnfitrion = false }) 
       : _random = generadorRandom ?? Random(), 
         super(JuegoEsperandoIniciales(tablero, numerosColocados: 0)) {
     
@@ -45,11 +46,36 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   // LÓGICA DE RED (ESCUCHAR AL SERVIDOR)
   // ==========================================================
   void _onRecibirMensajeServidor(RecibirMensajeServidor event, Emitter<JuegoState> emit) {
-    if (state is! JuegoEnProgreso) return;
-    final actual = state as JuegoEnProgreso;
     final tipo = event.datos['tipo'];
 
-    if (tipo == 'zona_reclamada') {
+    // 1. EL SERVIDOR NOS AVISA CUÁNTOS JUGADORES YA PUSIERON SUS PIEZAS
+    if (tipo == 'actualizacion_listos' && state is JuegoActivo) {
+      emit(JuegoActivo(
+        state.tablero, 
+        listos: event.datos['listos'], 
+        total: event.datos['total']
+      ));
+    } 
+    // 2. EL SERVIDOR NOS MANDA LOS MISMOS DADOS A TODOS
+    else if (tipo == 'nuevos_dados') {
+      int tiradaActual = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).idTirada : 0;
+      int puntosActuales = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
+      Set<String> completadas = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).zonasCompletadas : {};
+      Map<String, int> global = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).estadoZonasGlobal : {};
+
+      emit(JuegoEnProgreso(
+        state.tablero,
+        dado1: event.datos['dado1'],
+        dado2: event.datos['dado2'],
+        puntuacion: puntosActuales,
+        zonasCompletadas: completadas,
+        estadoZonasGlobal: global,
+        idTirada: tiradaActual + 1,
+      ));
+    }
+    // 3. EL SERVIDOR NOS AVISA QUE ALGUIEN MÁS LLENÓ UNA ZONA
+    else if (tipo == 'zona_reclamada' && state is JuegoEnProgreso) {
+      final actual = state as JuegoEnProgreso;
       final idZona = event.datos['idZona'];
       final lugar = event.datos['lugar']; // 1, 2 o 3
 
@@ -62,7 +88,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         actual.puntuacion, 
         actual.zonasCompletadas,
         estadoGlobal: nuevoEstadoGlobal,
-        // Si no fui yo quien lo reclamó, muestro una alerta avisando que alguien me ganó
         mensajeAlerta: '¡Alguien reclamó la zona $idZona en lugar #$lugar!'
       ));
     }
@@ -109,6 +134,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   void _actualizarEstadoInicial(Emitter<JuegoState> emit) {
     int colocados = state.tablero.contarNumerosIniciales();
     if (colocados >= 6) { 
+      if (servicioRed != null) servicioRed!.declararListo(); // <-- Le grita al servidor "¡Ya acabé!"
       emit(JuegoActivo(state.tablero));
     } else {
       emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: colocados));
@@ -141,7 +167,41 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   }
 
   void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
-    emit(_generarNuevoTurno(state.tablero, 0, {})); 
+    if (servicioRed != null) {
+      if (esAnfitrion) servicioRed!.tirarDadosGlobales();
+    } else {
+      emit(_generarNuevoTurno(state.tablero, 0, {})); // Solitario sigue normal
+    }
+  }
+
+  void _onPasarTurno(PasarTurno event, Emitter<JuegoState> emit) {
+    if (state is JuegoEnProgreso) {
+      final actual = state as JuegoEnProgreso;
+      
+      if (servicioRed != null) {
+        if (esAnfitrion) {
+          // El anfitrión detona el cambio de turno para todos
+          servicioRed!.tirarDadosGlobales();
+        } else {
+          // El invitado pasa turno: limpiamos su selección de ancla y le pedimos esperar
+          emit(JuegoEnProgreso(
+            actual.tablero,
+            dado1: actual.dado1,
+            dado2: actual.dado2,
+            puntuacion: actual.puntuacion,
+            zonasCompletadas: actual.zonasCompletadas,
+            estadoZonasGlobal: actual.estadoZonasGlobal,
+            idTirada: actual.idTirada, // Mismo turno, sigue esperando
+            anclaSeleccionada: null,   // Limpiamos su selección
+            numeroAColocar: null,      // Limpiamos su selección
+            mensajeAlerta: 'Turno pasado. Esperando al anfitrión...'
+          ));
+        }
+      } else {
+        // Modo un jugador (Offline)
+        emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas, estadoGlobal: actual.estadoZonasGlobal));
+      }
+    }
   }
 
   void _onSeleccionarAncla(SeleccionarAncla event, Emitter<JuegoState> emit) {
@@ -177,35 +237,47 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           nuevasZonas.add(idZona); 
 
           if (servicioRed != null) {
-            // MULTIJUGADOR: Avisamos al servidor para que nos asigne un lugar (1ero, 2do o 3ro)
+            // MULTIJUGADOR: Avisamos al servidor
             servicioRed!.enviarJugada({
               'accion': 'reclamar_zona',
               'idZona': idZona
             });
             alertaPersonalizada = 'Validando zona $idZona con el servidor...';
           } else {
-            // UN JUGADOR (OFFLINE): Nos damos los puntos máximos directo
+            // UN JUGADOR: Puntos directos
             int puntos = MotorReglas.obtenerPuntosPrimeraVez(idZona);
             nuevaPuntuacion += puntos;
             alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
           }
         }
 
-        emit(_generarNuevoTurno(
-          actual.tablero, 
-          nuevaPuntuacion, 
-          nuevasZonas,
-          estadoGlobal: actual.estadoZonasGlobal,
-          mensajeAlerta: alertaPersonalizada
-        ));
+        if (servicioRed != null) {
+          // MULTIJUGADOR: NO avanzamos turno ni tiramos dados.
+          // Solo actualizamos el tablero, limpiamos el ancla y esperamos al anfitrión.
+          emit(JuegoEnProgreso(
+            actual.tablero,
+            dado1: actual.dado1, // Mantenemos el mismo dado 1
+            dado2: actual.dado2, // Mantenemos el mismo dado 2
+            idTirada: actual.idTirada, // Mantenemos el mismo turno
+            anclaSeleccionada: null, // Limpiamos para que no mueva dos veces
+            numeroAColocar: null, 
+            puntuacion: nuevaPuntuacion,
+            zonasCompletadas: nuevasZonas,
+            estadoZonasGlobal: actual.estadoZonasGlobal,
+            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando al anfitrión...'
+          ));
+        } else {
+          // UN JUGADOR (OFFLINE): Avanza el turno automáticamente como antes
+          emit(_generarNuevoTurno(
+            actual.tablero, 
+            nuevaPuntuacion, 
+            nuevasZonas,
+            estadoGlobal: actual.estadoZonasGlobal,
+            mensajeAlerta: alertaPersonalizada
+          ));
+        }
       }
     }
   }
 
-  void _onPasarTurno(PasarTurno event, Emitter<JuegoState> emit) {
-    if (state is JuegoEnProgreso) {
-      final actual = state as JuegoEnProgreso;
-      emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas, estadoGlobal: actual.estadoZonasGlobal));
-    }
-  }
 }

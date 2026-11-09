@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/servicios/servicio_multiplayer.dart';
 import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
@@ -96,7 +95,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
               MaterialPageRoute(
                 builder: (context) => BlocProvider(
                   create: (context) => JuegoBloc(
-                    Tablero(CapaZonas(mapaElegido)),servicioRed: _servicio), 
+                    Tablero(CapaZonas(mapaElegido)),servicioRed: _servicio, esAnfitrion: _esAnfitrion), 
                   child: const PantallaTablero(),
                 ),
               ),

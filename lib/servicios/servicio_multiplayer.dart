@@ -74,4 +74,12 @@ class ServicioMultiplayer {
     _canal = null;
     _streamBroadcast = null;
   }
+
+  void declararListo() {
+    _enviar({'accion': 'listo_para_jugar'});
+  }
+
+  void tirarDadosGlobales() {
+    _enviar({'accion': 'tirar_dados'});
+  }
 }

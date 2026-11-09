@@ -54,7 +54,13 @@ class PanelControles extends StatelessWidget {
                 TextButton(
                   key: const Key('boton_pasar_turno'),
                   onPressed: () => context.read<JuegoBloc>().add(PasarTurno()),
-                  child: const Text('Pasar Turno', style: TextStyle(color: Colors.red)),
+                  child: Text(
+                    (context.read<JuegoBloc>().servicioRed != null && context.read<JuegoBloc>().esAnfitrion) 
+                        ? 'Tirar Dados' // El anfitrión tira por todos
+                        : 'Pasar Turno', // El invitado solo pasa y espera
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
                 )
               ],
             ),
@@ -62,31 +68,36 @@ class PanelControles extends StatelessWidget {
         ),
       );
     } else {
-      bool estaListoParaIniciar = state is JuegoActivo;
-      return Visibility(
-        visible: state is! JuegoEnProgreso,
-        maintainSize: true, 
-        maintainAnimation: true,
-        maintainState: true,
-        child: ElevatedButton(
+      if (state is JuegoActivo) {
+        final estado = state as JuegoActivo;
+        final bloc = context.read<JuegoBloc>();
+        final esMultiplayer = bloc.servicioRed != null;
+        final esAnfitrion = bloc.esAnfitrion;
+
+        String textoBoton = 'INICIAR';
+        bool habilitado = true;
+
+        if (esMultiplayer) {
+          if (esAnfitrion) {
+             textoBoton = 'INICIAR PARTIDA (${estado.listos}/${estado.total})';
+             habilitado = (estado.listos == estado.total && estado.total > 0);
+          } else {
+             textoBoton = 'ESPERANDO JUGADORES (${estado.listos}/${estado.total})...';
+             habilitado = false;
+          }
+        }
+
+        return ElevatedButton(
             key: const Key('boton_iniciar_partida'),
             style: ElevatedButton.styleFrom(
-              // Cambiamos el gris oscuro por un blueGrey más claro para que resalte
-              backgroundColor: estaListoParaIniciar ? Colors.green : Colors.blueGrey[600],
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+              backgroundColor: habilitado ? Colors.green : Colors.blueGrey[600],
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
-            onPressed: estaListoParaIniciar ? () => context.read<JuegoBloc>().add(ComenzarPartida()) : null,
-            child: Text(
-              'INICIAR',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                // Cambiamos el black38 por white70 para que las letras se lean claramente
-                color: estaListoParaIniciar ? Colors.white : Colors.white70,
-              ),
-            ),
-        ),
-      );
+            onPressed: habilitado ? () => context.read<JuegoBloc>().add(ComenzarPartida()) : null,
+            child: Text(textoBoton, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: habilitado ? Colors.white : Colors.white70)),
+        );
+      }
+      return const SizedBox.shrink();
     }
   }
 }
