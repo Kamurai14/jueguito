@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:jueguito/juego_event.dart';
 import 'package:jueguito/servicios/servicio_multiplayer.dart';
 import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
@@ -22,10 +23,10 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   String? _codigoGenerado;
   String _estado = 'Conectando al servidor...';
   
-  // VARIABLES MULTIJUGADOR
   bool _esAnfitrion = false;
   List<String> _jugadores = [];
-  bool _saliendoVoluntariamente = false; // Para saber si cerramos el socket nosotros// Para evitar mostrar el mensaje de desconexión al ir al juego
+  bool _saliendoVoluntariamente = false;
+  String _mapaSeleccionado = 'mapa1'; // <-- Guardamos qué mapa se va a jugar
 
   @override
   void initState() {
@@ -35,8 +36,6 @@ class _PantallaLobbyState extends State<PantallaLobby> {
 
   Future<void> _iniciarConexion() async {
     final exito = await _servicio.conectar();
-    
-    // FIX 1: Si el usuario le dio "Atrás" y la pantalla ya se cerró, abortamos de inmediato.
     if (!mounted) return; 
 
     if (exito) {
@@ -47,12 +46,12 @@ class _PantallaLobbyState extends State<PantallaLobby> {
       _escucharServidor();
     } else {
       setState(() {
-        _conectando = false; // FIX 2: Ocultar la bolita de carga si la conexión falla.
+        _conectando = false; 
         _estado = 'Error de conexión. Verifica tu internet o servidor.';
       });
     }
   }
-  // BANDERITA NUEVA: Para saber si cerramos el socket nosotros a propósito
+
   void _escucharServidor() {
     _servicio.streamMensajes?.listen((mensaje) {
       final datos = jsonDecode(mensaje);
@@ -61,14 +60,10 @@ class _PantallaLobbyState extends State<PantallaLobby> {
       setState(() {
         switch (datos['tipo']) {
           case 'sala_creada':
-            _esAnfitrion = true;
-            _codigoGenerado = datos['codigo'];
-            _jugadores = List<String>.from(datos['jugadores']);
-            break;
-            
           case 'unido_exitosamente':
-            _esAnfitrion = false;
+            _esAnfitrion = datos['tipo'] == 'sala_creada';
             _codigoGenerado = datos['codigo'];
+            _mapaSeleccionado = datos['mapa'] ?? 'mapa1'; // Guardamos el mapa de la sala
             _jugadores = List<String>.from(datos['jugadores']);
             break;
             
@@ -100,7 +95,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (context) => BlocProvider(
-                  create: (context) => JuegoBloc(Tablero(CapaZonas(mapaElegido)), servicioRed: _servicio),
+                  create: (context) => JuegoBloc(
+                    Tablero(CapaZonas(mapaElegido)),servicioRed: _servicio), 
                   child: const PantallaTablero(),
                 ),
               ),
@@ -115,9 +111,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
 
   @override
   void dispose() {
-    // Si nos salimos al menú principal o cerramos la pantalla de golpe:
     if (!_saliendoVoluntariamente) {
-      // Forzamos el cierre de la suscripción y socket de forma segura
       try {
         _servicio.desconectar();
       } catch (_) {}
@@ -126,22 +120,57 @@ class _PantallaLobbyState extends State<PantallaLobby> {
     super.dispose();
   }
 
+  // DIÁLOGO PREVIO: Elige el mapa antes de crear la sala
+  void _mostrarSelectorDeMapasParaCrear() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Elige la Campaña (Mapa)'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: TipoMapa.values.length,
+              itemBuilder: (context, index) {
+                final tipo = TipoMapa.values[index];
+                return ListTile(
+                  leading: const Icon(Icons.map, color: Color(0xFFFF6B00), size: 40),
+                  title: Text('Mapa ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('Toca para crear la sala'),
+                  onTap: () {
+                    Navigator.pop(context); 
+                    _servicio.crearSala(tipo.name); // Crea la sala con este mapa
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+          ],
+        );
+      }
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        // Activamos la bandera al presionar atrás para limpiar bien el socket
         _saliendoVoluntariamente = true;
         _servicio.desconectar();
       },
-    child: Scaffold(
-        backgroundColor: const Color(0xFFF8F5EE),
+      child: Scaffold(
+        backgroundColor: const Color(0xFF1E1E1E), // Fondo oscuro más gamer
         appBar: AppBar(
-          title: const Text('Lobby Multijugador'),
-          backgroundColor: const Color(0xFF0055A4),
+          title: const Text('Multijugador'),
+          backgroundColor: const Color(0xFF000000),
           foregroundColor: Colors.white,
-          // Si pones el botón de atrás manual, asegúrate de marcar la bandera:
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
@@ -151,60 +180,62 @@ class _PantallaLobbyState extends State<PantallaLobby> {
             },
           ),
         ),
-      body: Center(
-        child: _conectando 
-          ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(color: Color(0xFFFF6B00)),
-                const SizedBox(height: 20),
-                Text(_estado, style: const TextStyle(fontSize: 18)),
-              ],
-            )
-          : Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: _codigoGenerado == null 
-                  ? _buildMenuInicial() 
-                  : _buildSalaDeEspera(),
-            ),
+        body: Center(
+          child: _conectando 
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: Color(0xFFFF6B00)),
+                  const SizedBox(height: 20),
+                  Text(_estado, style: const TextStyle(fontSize: 18, color: Colors.white)),
+                ],
+              )
+            : Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: _codigoGenerado == null 
+                    ? _buildMenuInicial() 
+                    : _buildSalaDeEspera(), // El lobby estilo L4D
+              ),
+        ),
       ),
-    )
     );
   }
 
-  // WIDGET: Menú para crear o unirse a sala
   Widget _buildMenuInicial() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         ElevatedButton.icon(
-          icon: const Icon(Icons.add),
-          label: const Text('Crear Sala Nueva', style: TextStyle(fontSize: 18)),
+          icon: const Icon(Icons.add_box),
+          label: const Text('Crear Nueva Sala', style: TextStyle(fontSize: 18)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0055A4),
+            backgroundColor: const Color(0xFFFF6B00),
             foregroundColor: Colors.white,
             minimumSize: const Size(double.infinity, 60),
           ),
-          onPressed: () => _servicio.crearSala(),
+          onPressed: _mostrarSelectorDeMapasParaCrear, // Abre el selector primero
         ),
         const SizedBox(height: 40),
-        const Text('O únete a una existente:', style: TextStyle(fontSize: 16)),
+        const Text('UNIRSE A UNA PARTIDA', style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold)),
         const SizedBox(height: 10),
         TextField(
           controller: _codigoController,
           textCapitalization: TextCapitalization.characters,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 5),
-          decoration: const InputDecoration(
-            labelText: 'CÓDIGO DE SALA',
-            border: OutlineInputBorder(),
-            prefixIcon: Icon(Icons.meeting_room),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 5, color: Colors.white),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.grey[800],
+            hintText: 'CÓDIGO',
+            hintStyle: const TextStyle(color: Colors.white38),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            prefixIcon: const Icon(Icons.meeting_room, color: Colors.white54),
           ),
         ),
         const SizedBox(height: 16),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF6B00),
+            backgroundColor: const Color(0xFF0055A4),
             foregroundColor: Colors.white,
             minimumSize: const Size(double.infinity, 60),
           ),
@@ -213,39 +244,60 @@ class _PantallaLobbyState extends State<PantallaLobby> {
               _servicio.unirseSala(_codigoController.text.trim());
             }
           },
-          child: const Text('Unirse a Partida', style: TextStyle(fontSize: 18)),
+          child: const Text('Entrar a la Sala', style: TextStyle(fontSize: 18)),
         ),
       ],
     );
   }
 
-  // WIDGET: Vista cuando ya estás dentro de una sala
   Widget _buildSalaDeEspera() {
+    // Extraemos el número del mapa (ej. de "mapa1" a "1") para mostrarlo bonito
+    String numeroMapa = _mapaSeleccionado.replaceAll(RegExp(r'[^0-9]'), '');
+
     return Column(
       children: [
-        const Text('Código de Invitación:', style: TextStyle(fontSize: 18, color: Colors.grey)),
-        const SizedBox(height: 5),
+        // EL PÓSTER DE LA CAMPAÑA (Al estilo Left 4 Dead)
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFF0055A4), width: 2),
+            color: Colors.blueGrey[900],
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: const Color(0xFFFF6B00), width: 2),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 5))
+            ]
           ),
-          child: Text(
-            _codigoGenerado!,
-            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, letterSpacing: 5),
+          child: Column(
+            children: [
+              const Text('CAMPAÑA SELECCIONADA', style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 2)),
+              const SizedBox(height: 5),
+              Text(
+                'MAPA $numeroMapa',
+                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('CÓDIGO DE SALA: ', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  Text(
+                    _codigoGenerado!,
+                    style: const TextStyle(color: Colors.amber, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 3),
+                  ),
+                ],
+              )
+            ],
           ),
         ),
         const SizedBox(height: 20),
         
-        // Lista de Jugadores
+        // LA LISTA DE JUGADORES
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.grey[900],
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
             ),
             child: ListView.builder(
               itemCount: _jugadores.length,
@@ -260,7 +312,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                   ),
                   title: Text(
                     _jugadores[index] + (index == 0 ? ' (Anfitrión)' : ''),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 );
               },
@@ -269,26 +321,26 @@ class _PantallaLobbyState extends State<PantallaLobby> {
         ),
         const SizedBox(height: 20),
 
-        // Botón de Acción dependiendo del Rol
+        // EL BOTÓN DE ARRANQUE
         if (_esAnfitrion)
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _jugadores.length >= 2 ? Colors.green : Colors.grey,
+              backgroundColor: _jugadores.length >= 2 ? Colors.green : Colors.grey[700],
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 60),
             ),
             onPressed: _jugadores.length >= 2 ? () => _servicio.iniciarPartida() : null,
             child: Text(
-              _jugadores.length >= 2 ? 'Iniciar Partida' : 'Esperando más jugadores...',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              _jugadores.length >= 2 ? 'EMPEZAR PARTIDA' : 'Esperando jugadores...',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2),
             ),
           )
         else
           Column(
             children: const [
-              CircularProgressIndicator(color: Color(0xFFE30059)),
+              CircularProgressIndicator(color: Color(0xFFFF6B00)),
               SizedBox(height: 15),
-              Text('Esperando a que el anfitrión inicie...', style: TextStyle(fontSize: 16)),
+              Text('Esperando a que el anfitrión inicie...', style: TextStyle(fontSize: 16, color: Colors.white70)),
             ],
           ),
       ],

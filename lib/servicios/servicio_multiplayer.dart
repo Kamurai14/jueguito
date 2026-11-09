@@ -6,6 +6,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ServicioMultiplayer {
   WebSocketChannel? _canal;
+  
+  // NUEVO: Creamos una variable para el stream compartido
+  Stream<dynamic>? _streamBroadcast; 
+  
   final bool _esProduccion = false;
   final _almacenamientoSeguro = const FlutterSecureStorage();
 
@@ -16,8 +20,8 @@ class ServicioMultiplayer {
     return 'ws://127.0.0.1:8080/ws';
   }
 
-  // Stream expuesto para que la UI reaccione instantáneamente
-  Stream<dynamic>? get streamMensajes => _canal?.stream;
+  // AHORA: Exponemos el stream compartido en lugar del original
+  Stream<dynamic>? get streamMensajes => _streamBroadcast;
 
   Future<bool> conectar() async {
     try {
@@ -26,14 +30,19 @@ class ServicioMultiplayer {
 
       final urlFinal = Uri.parse('$_wsUrl?token=$token');
       _canal = WebSocketChannel.connect(urlFinal);
+      
+      // MAGIA AQUÍ: Convertimos el canal a "Broadcast" para que soporte múltiples oyentes
+      _streamBroadcast = _canal!.stream.asBroadcastStream();
+      
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  void crearSala() {
-    _enviar({'accion': 'crear_sala'});
+  // AHORA PIDE EL MAPA
+  void crearSala(String mapa) {
+    _enviar({'accion': 'crear_sala', 'mapa': mapa});
   }
 
   void unirseSala(String codigo) {
@@ -63,5 +72,6 @@ class ServicioMultiplayer {
   void desconectar() {
     _canal?.sink.close();
     _canal = null;
+    _streamBroadcast = null;
   }
 }

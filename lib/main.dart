@@ -5,7 +5,6 @@ import 'package:jueguito/auth_event.dart';
 import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/ui/pantalla_carga.dart';
 import 'package:jueguito/ui/pantalla_login.dart';
-import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/ui/pantalla_menu_principal.dart';
 
 void main() {
