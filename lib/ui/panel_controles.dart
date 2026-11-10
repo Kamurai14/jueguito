@@ -24,11 +24,18 @@ class PanelControles extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Selecciona el Ancla:',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            // AQUÍ INTEGRAMOS LOS MENSAJES DE ALERTA DINÁMICOS
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                estadoJuego.mensajeAlerta ?? 'Selecciona el Ancla:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  // Si es una alerta se pone ámbar, si no, se queda blanco
+                  color: estadoJuego.mensajeAlerta != null ? Colors.amberAccent : Colors.white,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 10),
@@ -54,13 +61,7 @@ class PanelControles extends StatelessWidget {
                 TextButton(
                   key: const Key('boton_pasar_turno'),
                   onPressed: () => context.read<JuegoBloc>().add(PasarTurno()),
-                  child: Text(
-                    (context.read<JuegoBloc>().servicioRed != null && context.read<JuegoBloc>().esAnfitrion) 
-                        ? 'Tirar Dados' // El anfitrión tira por todos
-                        : 'Pasar Turno', // El invitado solo pasa y espera
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: const Text('Pasar Turno', style: TextStyle(color: Colors.red)),
                 )
               ],
             ),

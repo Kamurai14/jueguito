@@ -179,24 +179,21 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       final actual = state as JuegoEnProgreso;
       
       if (servicioRed != null) {
-        if (esAnfitrion) {
-          // El anfitrión detona el cambio de turno para todos
-          servicioRed!.tirarDadosGlobales();
-        } else {
-          // El invitado pasa turno: limpiamos su selección de ancla y le pedimos esperar
-          emit(JuegoEnProgreso(
-            actual.tablero,
-            dado1: actual.dado1,
-            dado2: actual.dado2,
-            puntuacion: actual.puntuacion,
-            zonasCompletadas: actual.zonasCompletadas,
-            estadoZonasGlobal: actual.estadoZonasGlobal,
-            idTirada: actual.idTirada, // Mismo turno, sigue esperando
-            anclaSeleccionada: null,   // Limpiamos su selección
-            numeroAColocar: null,      // Limpiamos su selección
-            mensajeAlerta: 'Turno pasado. Esperando al anfitrión...'
-          ));
-        }
+        // MULTIJUGADOR: Todos avisan que pasaron y se quedan en espera
+        servicioRed!.terminarTurno();
+        
+        emit(JuegoEnProgreso(
+          actual.tablero,
+          dado1: actual.dado1,
+          dado2: actual.dado2,
+          puntuacion: actual.puntuacion,
+          zonasCompletadas: actual.zonasCompletadas,
+          estadoZonasGlobal: actual.estadoZonasGlobal,
+          idTirada: actual.idTirada, 
+          anclaSeleccionada: null,   
+          numeroAColocar: null,      
+          mensajeAlerta: 'Turno pasado. Esperando a los demás...'
+        ));
       } else {
         // Modo un jugador (Offline)
         emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas, estadoGlobal: actual.estadoZonasGlobal));
@@ -236,35 +233,38 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
           nuevasZonas.add(idZona); 
 
+          // ¡EL FIX!: Calculamos y sumamos los puntos SIEMPRE (sea online u offline)
+          int puntos = MotorReglas.obtenerPuntosPrimeraVez(idZona);
+          nuevaPuntuacion += puntos;
+
           if (servicioRed != null) {
-            // MULTIJUGADOR: Avisamos al servidor
+            // MULTIJUGADOR: Avisamos al servidor para que atenúe el color a los demás
             servicioRed!.enviarJugada({
               'accion': 'reclamar_zona',
               'idZona': idZona
             });
-            alertaPersonalizada = 'Validando zona $idZona con el servidor...';
+            alertaPersonalizada = '¡Zona $idZona completada! +$puntos pts (Sincronizando...)';
           } else {
-            // UN JUGADOR: Puntos directos
-            int puntos = MotorReglas.obtenerPuntosPrimeraVez(idZona);
-            nuevaPuntuacion += puntos;
+            // UN JUGADOR
             alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
           }
         }
 
         if (servicioRed != null) {
-          // MULTIJUGADOR: NO avanzamos turno ni tiramos dados.
-          // Solo actualizamos el tablero, limpiamos el ancla y esperamos al anfitrión.
+          // MULTIJUGADOR: Avisamos que ya terminamos y esperamos a los demás.
+          servicioRed!.terminarTurno(); // <-- ¡NUEVO!
+
           emit(JuegoEnProgreso(
             actual.tablero,
-            dado1: actual.dado1, // Mantenemos el mismo dado 1
-            dado2: actual.dado2, // Mantenemos el mismo dado 2
-            idTirada: actual.idTirada, // Mantenemos el mismo turno
-            anclaSeleccionada: null, // Limpiamos para que no mueva dos veces
+            dado1: actual.dado1, 
+            dado2: actual.dado2, 
+            idTirada: actual.idTirada, 
+            anclaSeleccionada: null, 
             numeroAColocar: null, 
             puntuacion: nuevaPuntuacion,
             zonasCompletadas: nuevasZonas,
             estadoZonasGlobal: actual.estadoZonasGlobal,
-            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando al anfitrión...'
+            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando a los demás...' // <-- Cambiamos el texto
           ));
         } else {
           // UN JUGADOR (OFFLINE): Avanza el turno automáticamente como antes

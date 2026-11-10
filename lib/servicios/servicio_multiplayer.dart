@@ -82,4 +82,8 @@ class ServicioMultiplayer {
   void tirarDadosGlobales() {
     _enviar({'accion': 'tirar_dados'});
   }
+
+  void terminarTurno() {
+    _enviar({'accion': 'terminar_turno'});
+  }
 }

@@ -46,33 +46,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
         title: const Text('Juego 7x7'),
       ),
       body: Center(
-        child: BlocConsumer<JuegoBloc, JuegoState>(
-          listener: (context, state) {
-            if (state is JuegoEnProgreso && state.mensajeAlerta != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  key: const Key('alerta_snack_bar'),
-                  content: Text(state.mensajeAlerta!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.amber[800],
-                  duration: const Duration(seconds: 4),
-                  behavior: SnackBarBehavior.floating,
-                )
-              );
-            } else if (state is JuegoEsperandoIniciales &&
-                state.mensajeAlerta != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    state.mensajeAlerta!,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  backgroundColor: Colors.redAccent,
-                  duration: const Duration(seconds: 3),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
+        child: BlocBuilder<JuegoBloc, JuegoState>(
           builder: (context, state) {
             return Column(
               mainAxisAlignment: MainAxisAlignment.center,
