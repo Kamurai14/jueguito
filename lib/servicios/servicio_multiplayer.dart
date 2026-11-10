@@ -1,3 +1,4 @@
+import 'dart:async'; // Necesario para el StreamController
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,21 +9,21 @@ class ServicioMultiplayer {
   WebSocketChannel? _canal;
   String? usuarioActual;
   
-  // NUEVO: Creamos una variable para el stream compartido
-  Stream<dynamic>? _streamBroadcast; 
+  // Usamos un StreamController en lugar de un asBroadcastStream directo
+  // Esto nos permite "inyectar" mensajes artificiales cuando se cae el internet
+  StreamController<dynamic>? _controladorStream; 
   
   final bool _esProduccion = false;
   final _almacenamientoSeguro = const FlutterSecureStorage();
 
-  // URL dinámica para WebSockets (ws:// en lugar de http://)
   String get _wsUrl {
     if (_esProduccion) return 'wss://api.tujuego.com/ws';
     if (!kIsWeb && Platform.isAndroid) return 'ws://10.0.2.2:8080/ws';
     return 'ws://127.0.0.1:8080/ws';
   }
 
-  // AHORA: Exponemos el stream compartido en lugar del original
-  Stream<dynamic>? get streamMensajes => _streamBroadcast;
+  // Exponemos el stream del controlador
+  Stream<dynamic>? get streamMensajes => _controladorStream?.stream;
 
   Future<bool> conectar() async {
     try {
@@ -33,8 +34,29 @@ class ServicioMultiplayer {
       usuarioActual = await _almacenamientoSeguro.read(key: 'usuario_actual');
       _canal = WebSocketChannel.connect(urlFinal);
       
-      // MAGIA AQUÍ: Convertimos el canal a "Broadcast" para que soporte múltiples oyentes
-      _streamBroadcast = _canal!.stream.asBroadcastStream();
+      // Inicializamos el controlador como Broadcast
+      _controladorStream = StreamController<dynamic>.broadcast();
+      
+      // Escuchamos el socket y pasamos los mensajes al controlador
+      _canal!.stream.listen(
+        (mensaje) {
+          _controladorStream?.add(mensaje);
+        },
+        onDone: () {
+          // SI SE CORTA EL INTERNET O EL SERVIDOR SE APAGA:
+          _controladorStream?.add(jsonEncode({
+            'tipo': 'desconexion_local', 
+            'razon': 'Se perdió la conexión con el servidor.'
+          }));
+        },
+        onError: (error) {
+          // SI HAY UN ERROR DE RED BRUSCO:
+          _controladorStream?.add(jsonEncode({
+            'tipo': 'desconexion_local', 
+            'razon': 'Error de red inesperado.'
+          }));
+        }
+      );
       
       return true;
     } catch (e) {
@@ -42,7 +64,6 @@ class ServicioMultiplayer {
     }
   }
 
-  // AHORA PIDE EL MAPA
   void crearSala(String mapa) {
     _enviar({'accion': 'crear_sala', 'mapa': mapa});
   }
@@ -82,7 +103,9 @@ class ServicioMultiplayer {
   void desconectar() {
     _canal?.sink.close();
     _canal = null;
-    _streamBroadcast = null;
+    
+    _controladorStream?.close();
+    _controladorStream = null;
   }
 
   void declararListo() {

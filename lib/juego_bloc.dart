@@ -86,14 +86,12 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       int nuevaPuntuacion = actual.puntuacion;
       String alerta = '¡$usuario reclamó la zona $idZona en lugar #$lugar!';
 
-      // ¡SI EL AVISO ES PARA NOSOTROS, NOS SUMAMOS LOS PUNTOS EXACTOS!
       if (servicioRed != null && usuario == servicioRed!.usuarioActual) {
         int puntos = MotorReglas.obtenerPuntos(idZona, lugar, mapaActual: actual.tablero.capa.tipoMapa);
         nuevaPuntuacion += puntos;
         alerta = '¡Validado! Ganaste el lugar #$lugar en $idZona (+$puntos pts) 🏆';
       }
-      // EL FIX: Emitimos el mismo estado en el que estábamos, solo actualizando puntos y el mapa global.
-      // NO llamamos a _generarNuevoTurno para no saltarle el turno al otro jugador.
+      
       emit(JuegoEnProgreso(
         actual.tablero,
         dado1: actual.dado1,                 
@@ -104,9 +102,46 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         puntuacion: nuevaPuntuacion,         
         zonasCompletadas: actual.zonasCompletadas,
         estadoZonasGlobal: nuevoEstadoGlobal, 
-        turnoTerminado: actual.turnoTerminado, // <-- ¡NUEVO! Respetamos su candado
+        turnoTerminado: actual.turnoTerminado, 
         mensajeAlerta: alerta
       ));
+    }
+    // 4. EL ANFITRIÓN CERRÓ LA SALA O NUESTRO INTERNET SE CAYÓ
+    else if (tipo == 'sala_cerrada' || tipo == 'desconexion_local') {
+      servicioRed?.desconectar();
+      
+      // Creamos un tablero completamente nuevo basado en la misma capa del mapa actual
+      emit(JuegoEsperandoIniciales(
+        Tablero(state.tablero.capa), 
+        numerosColocados: 0,
+        mensajeAlerta: event.datos['razon'] ?? 'Desconectado de la partida.'
+      ));
+    }
+    // 5. UN INVITADO ABANDONÓ LA SALA
+    else if (tipo == 'jugador_abandono') {
+      if (state is JuegoActivo) {
+        final actual = state as JuegoActivo;
+        emit(JuegoActivo(
+          actual.tablero,
+          listos: actual.listos,
+          total: event.datos['total'] ?? actual.total, 
+        ));
+      } else if (state is JuegoEnProgreso) {
+        final actual = state as JuegoEnProgreso;
+        emit(JuegoEnProgreso(
+          actual.tablero,
+          dado1: actual.dado1,
+          dado2: actual.dado2,
+          idTirada: actual.idTirada,
+          anclaSeleccionada: actual.anclaSeleccionada,
+          numeroAColocar: actual.numeroAColocar,
+          puntuacion: actual.puntuacion,
+          zonasCompletadas: actual.zonasCompletadas,
+          estadoZonasGlobal: actual.estadoZonasGlobal,
+          turnoTerminado: actual.turnoTerminado, 
+          mensajeAlerta: '⚠️ ${event.datos['usuario']} abandonó la partida.'
+        ));
+      }
     }
   }
 

@@ -16,7 +16,7 @@ class TemaJuego {
   static Color obtenerColorZona(String idZona, int vecesReclamada) {
     Color colorBase = _obtenerColorBase(idZona);
 
-    // Atenuación progresiva usando el nuevo método recomendado por Flutter
+    // Atenuación progresiva dependiendo del estado global de la zona
     switch (vecesReclamada) {
       case 0:
         return colorBase; // 100% vivo (Nadie ha puntuado)
