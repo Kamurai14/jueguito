@@ -47,7 +47,8 @@ class PanelControles extends StatelessWidget {
                   valor: estadoJuego.dado1,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado1,
                   idTirada: estadoJuego.idTirada,
-                  onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2)),
+                  // Si el turno terminó, desactivamos el tap
+                  onTap: estadoJuego.turnoTerminado ? () {} : () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2)),
                 ),
                 const SizedBox(width: 20),
                 _DadoBoton(
@@ -55,13 +56,15 @@ class PanelControles extends StatelessWidget {
                   valor: estadoJuego.dado2,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado2,
                   idTirada: estadoJuego.idTirada,
-                  onTap: () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1)),
+                  // Si el turno terminó, desactivamos el tap
+                  onTap: estadoJuego.turnoTerminado ? () {} : () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1)),
                 ),
                 const SizedBox(width: 30),
                 TextButton(
                   key: const Key('boton_pasar_turno'),
-                  onPressed: () => context.read<JuegoBloc>().add(PasarTurno()),
-                  child: const Text('Pasar Turno', style: TextStyle(color: Colors.red)),
+                  // Botón deshabilitado si ya jugó
+                  onPressed: estadoJuego.turnoTerminado ? null : () => context.read<JuegoBloc>().add(PasarTurno()),
+                  child: Text('Pasar Turno', style: TextStyle(color: estadoJuego.turnoTerminado ? Colors.grey : Colors.red)),
                 )
               ],
             ),

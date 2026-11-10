@@ -44,6 +44,7 @@ class JuegoEnProgreso extends JuegoState {
   final Set<String> zonasCompletadas; // Zonas que TÚ ya llenaste
   final Map<String, int> estadoZonasGlobal; // NUEVO: Zonas reclamadas por TODOS { 'AM': 1, 'NA1': 3 }
   final String? mensajeAlerta;
+  final bool turnoTerminado; // <-- NUEVO: Bandera de bloqueo
 
   JuegoEnProgreso(
     super.tablero, {
@@ -56,5 +57,6 @@ class JuegoEnProgreso extends JuegoState {
     this.zonasCompletadas = const {},
     this.estadoZonasGlobal = const {}, // Inicia vacío
     this.mensajeAlerta,
+    this.turnoTerminado = false, // Por defecto, el turno no está terminado
   });
 }

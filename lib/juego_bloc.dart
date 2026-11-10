@@ -96,14 +96,15 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       // NO llamamos a _generarNuevoTurno para no saltarle el turno al otro jugador.
       emit(JuegoEnProgreso(
         actual.tablero,
-        dado1: actual.dado1,                 // Mismos dados
+        dado1: actual.dado1,                 
         dado2: actual.dado2,
-        idTirada: actual.idTirada,           // Mismo turno
-        anclaSeleccionada: actual.anclaSeleccionada, // Le respetamos si ya había tocado un dado
+        idTirada: actual.idTirada,           
+        anclaSeleccionada: actual.anclaSeleccionada, 
         numeroAColocar: actual.numeroAColocar,
-        puntuacion: nuevaPuntuacion,         // Puntos sumados (si fuimos nosotros)
+        puntuacion: nuevaPuntuacion,         
         zonasCompletadas: actual.zonasCompletadas,
-        estadoZonasGlobal: nuevoEstadoGlobal, // Se atenúa el color en su pantalla
+        estadoZonasGlobal: nuevoEstadoGlobal, 
+        turnoTerminado: actual.turnoTerminado, // <-- ¡NUEVO! Respetamos su candado
         mensajeAlerta: alerta
       ));
     }
@@ -195,8 +196,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       final actual = state as JuegoEnProgreso;
       
       if (servicioRed != null) {
-        // MULTIJUGADOR: Todos avisan que pasaron y se quedan en espera
-        servicioRed!.terminarTurno();
+        if (!actual.turnoTerminado) servicioRed!.terminarTurno(); // Solo avisa si no lo había hecho
         
         emit(JuegoEnProgreso(
           actual.tablero,
@@ -208,7 +208,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           idTirada: actual.idTirada, 
           anclaSeleccionada: null,   
           numeroAColocar: null,      
-          mensajeAlerta: 'Turno pasado. Esperando a los demás...'
+          turnoTerminado: true, // <-- ¡NUEVO! BLOQUEO ACTIVADO
+          mensajeAlerta: 'Turno terminado. Esperando a los demás...'
         ));
       } else {
         // Modo un jugador (Offline)
@@ -220,6 +221,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   void _onSeleccionarAncla(SeleccionarAncla event, Emitter<JuegoState> emit) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
+      // EL FIX: Si ya jugó, lo ignoramos
+      if (actual.turnoTerminado) return; 
       emit(JuegoEnProgreso(
         actual.tablero,
         dado1: actual.dado1,
@@ -230,6 +233,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         puntuacion: actual.puntuacion,
         zonasCompletadas: actual.zonasCompletadas,
         estadoZonasGlobal: actual.estadoZonasGlobal,
+        turnoTerminado: actual.turnoTerminado, 
       ));
     }
   }
@@ -262,8 +266,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         }
 
         if (servicioRed != null) {
-          // MULTIJUGADOR: Avisamos que ya terminamos y esperamos a los demás.
-          servicioRed!.terminarTurno(); // <-- ¡NUEVO!
+          servicioRed!.terminarTurno(); 
 
           emit(JuegoEnProgreso(
             actual.tablero,
@@ -275,7 +278,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
             puntuacion: nuevaPuntuacion,
             zonasCompletadas: nuevasZonas,
             estadoZonasGlobal: actual.estadoZonasGlobal,
-            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando a los demás...' // <-- Cambiamos el texto
+            turnoTerminado: true, // <-- ¡NUEVO! BLOQUEO ACTIVADO
+            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando a los demás...'
           ));
         } else {
           // UN JUGADOR (OFFLINE): Avanza el turno automáticamente como antes
