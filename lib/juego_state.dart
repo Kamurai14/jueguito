@@ -45,6 +45,7 @@ class JuegoEnProgreso extends JuegoState {
   final Map<String, int> estadoZonasGlobal; // NUEVO: Zonas reclamadas por TODOS { 'AM': 1, 'NA1': 3 }
   final String? mensajeAlerta;
   final bool turnoTerminado; // <-- NUEVO: Bandera de bloqueo
+  final int totalJugadores;
 
   JuegoEnProgreso(
     super.tablero, {
@@ -58,5 +59,14 @@ class JuegoEnProgreso extends JuegoState {
     this.estadoZonasGlobal = const {}, // Inicia vacío
     this.mensajeAlerta,
     this.turnoTerminado = false, // Por defecto, el turno no está terminado
+    this.totalJugadores = 1, // Por defecto, un jugador
   });
+}
+
+class JuegoTerminado extends JuegoState {
+  final String mensaje;
+  final int puntuacionFinal;
+  final bool esVictoria;
+
+  JuegoTerminado(super.tablero, {required this.mensaje, required this.puntuacionFinal, required this.esVictoria});
 }

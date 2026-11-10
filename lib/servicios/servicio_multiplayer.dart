@@ -119,4 +119,8 @@ class ServicioMultiplayer {
   void terminarTurno() {
     _enviar({'accion': 'terminar_turno'});
   }
+
+  void declararVictoria(int puntuacion) {
+    _enviar({'accion': 'declarar_victoria', 'puntuacion': puntuacion});
+  }
 }

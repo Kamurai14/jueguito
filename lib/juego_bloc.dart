@@ -62,6 +62,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       int puntosActuales = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
       Set<String> completadas = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).zonasCompletadas : {};
       Map<String, int> global = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).estadoZonasGlobal : {};
+      int totalJugadores = (state is JuegoActivo) ? (state as JuegoActivo).total : (state is JuegoEnProgreso ? (state as JuegoEnProgreso).totalJugadores : 1);
 
       emit(JuegoEnProgreso(
         state.tablero,
@@ -71,6 +72,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         zonasCompletadas: completadas,
         estadoZonasGlobal: global,
         idTirada: tiradaActual + 1,
+        totalJugadores: totalJugadores,
       ));
     }
     // 3. EL SERVIDOR NOS AVISA QUE ALGUIEN MÁS (O NOSOTROS MISMOS) LLENÓ UNA ZONA
@@ -90,6 +92,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         int puntos = MotorReglas.obtenerPuntos(idZona, lugar, mapaActual: actual.tablero.capa.tipoMapa);
         nuevaPuntuacion += puntos;
         alerta = '¡Validado! Ganaste el lugar #$lugar en $idZona (+$puntos pts) 🏆';
+        
+        _verificarFinDePartida(actual, nuevaPuntuacion, emit, esOffline: false);
       }
       
       emit(JuegoEnProgreso(
@@ -103,6 +107,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         zonasCompletadas: actual.zonasCompletadas,
         estadoZonasGlobal: nuevoEstadoGlobal, 
         turnoTerminado: actual.turnoTerminado, 
+        totalJugadores: actual.totalJugadores,
         mensajeAlerta: alerta
       ));
     }
@@ -110,7 +115,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     else if (tipo == 'sala_cerrada' || tipo == 'desconexion_local') {
       servicioRed?.desconectar();
       
-      // Creamos un tablero completamente nuevo basado en la misma capa del mapa actual
       emit(JuegoEsperandoIniciales(
         Tablero(state.tablero.capa), 
         numerosColocados: 0,
@@ -139,9 +143,27 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           zonasCompletadas: actual.zonasCompletadas,
           estadoZonasGlobal: actual.estadoZonasGlobal,
           turnoTerminado: actual.turnoTerminado, 
+          totalJugadores: actual.totalJugadores,
           mensajeAlerta: '⚠️ ${event.datos['usuario']} abandonó la partida.'
         ));
       }
+    }
+    // 6. VICTORIA POR ABANDONO
+    else if (tipo == 'victoria_por_abandono') {
+      servicioRed?.desconectar();
+      int puntos = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
+      emit(JuegoTerminado(state.tablero, mensaje: event.datos['mensaje'], puntuacionFinal: puntos, esVictoria: true));
+    }
+    // 7. FIN DE PARTIDA GLOBAL (ONLINE)
+    else if (tipo == 'fin_de_partida') {
+      servicioRed?.desconectar();
+      bool ganaste = event.datos['ganador'] == servicioRed?.usuarioActual;
+      emit(JuegoTerminado(
+        state.tablero, 
+        mensaje: ganaste ? '¡Eres el ganador indiscutible!' : '${event.datos['ganador']} ha ganado la partida con ${event.datos['puntuacion']} puntos.', 
+        puntuacionFinal: (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0, 
+        esVictoria: ganaste
+      ));
     }
   }
 
@@ -186,7 +208,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   void _actualizarEstadoInicial(Emitter<JuegoState> emit) {
     int colocados = state.tablero.contarNumerosIniciales();
     if (colocados >= 6) { 
-      if (servicioRed != null) servicioRed!.declararListo(); // <-- Le grita al servidor "¡Ya acabé!"
+      if (servicioRed != null) servicioRed!.declararListo();
       emit(JuegoActivo(state.tablero));
     } else {
       emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: colocados));
@@ -200,11 +222,12 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     Tablero tablero, 
     int puntuacionActual, 
     Set<String> zonasCompletadas,
-    {Map<String, int>? estadoGlobal, String? mensajeAlerta}
+    {Map<String, int>? estadoGlobal, String? mensajeAlerta, int? totalJugadores}
   ) {
     final rand = _random; 
     final siguienteId = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).idTirada + 1 : 1;
     final global = estadoGlobal ?? (state is JuegoEnProgreso ? (state as JuegoEnProgreso).estadoZonasGlobal : <String, int>{});
+    final total = totalJugadores ?? (state is JuegoEnProgreso ? (state as JuegoEnProgreso).totalJugadores : 1);
 
     return JuegoEnProgreso(
       tablero,
@@ -215,14 +238,17 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       estadoZonasGlobal: global,
       mensajeAlerta: mensajeAlerta,
       idTirada: siguienteId,
+      totalJugadores: total,
     );
   }
 
   void _onComenzarPartida(ComenzarPartida event, Emitter<JuegoState> emit) {
+    int total = (state is JuegoActivo) ? (state as JuegoActivo).total : 1;
+    
     if (servicioRed != null) {
       if (esAnfitrion) servicioRed!.tirarDadosGlobales();
     } else {
-      emit(_generarNuevoTurno(state.tablero, 0, {})); // Solitario sigue normal
+      emit(_generarNuevoTurno(state.tablero, 0, {}, totalJugadores: total)); 
     }
   }
 
@@ -231,7 +257,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       final actual = state as JuegoEnProgreso;
       
       if (servicioRed != null) {
-        if (!actual.turnoTerminado) servicioRed!.terminarTurno(); // Solo avisa si no lo había hecho
+        if (!actual.turnoTerminado) servicioRed!.terminarTurno();
         
         emit(JuegoEnProgreso(
           actual.tablero,
@@ -243,12 +269,17 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           idTirada: actual.idTirada, 
           anclaSeleccionada: null,   
           numeroAColocar: null,      
-          turnoTerminado: true, // <-- ¡NUEVO! BLOQUEO ACTIVADO
+          turnoTerminado: true,
+          totalJugadores: actual.totalJugadores,
           mensajeAlerta: 'Turno terminado. Esperando a los demás...'
         ));
       } else {
         // Modo un jugador (Offline)
-        emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas, estadoGlobal: actual.estadoZonasGlobal));
+        if (actual.idTirada >= 22) {
+          emit(JuegoTerminado(actual.tablero, mensaje: '¡Juego Solitario Terminado! Has sobrevivido 22 turnos.', puntuacionFinal: actual.puntuacion, esVictoria: true));
+        } else {
+          emit(_generarNuevoTurno(actual.tablero, actual.puntuacion, actual.zonasCompletadas, estadoGlobal: actual.estadoZonasGlobal));
+        }
       }
     }
   }
@@ -256,7 +287,6 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
   void _onSeleccionarAncla(SeleccionarAncla event, Emitter<JuegoState> emit) {
     if (state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
-      // EL FIX: Si ya jugó, lo ignoramos
       if (actual.turnoTerminado) return; 
       emit(JuegoEnProgreso(
         actual.tablero,
@@ -269,6 +299,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         zonasCompletadas: actual.zonasCompletadas,
         estadoZonasGlobal: actual.estadoZonasGlobal,
         turnoTerminado: actual.turnoTerminado, 
+        totalJugadores: actual.totalJugadores,
       ));
     }
   }
@@ -284,16 +315,13 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         Set<String> nuevasZonas = Set.from(actual.zonasCompletadas);
         String? alertaPersonalizada;
 
-        // ¿Llenamos la zona y no la habíamos marcado antes?
         if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
           nuevasZonas.add(idZona); 
 
           if (servicioRed != null) {
-            // MULTIJUGADOR: Mandamos nuestro turno para el desempate, pero NO nos sumamos puntos aún.
             servicioRed!.reclamarZona(idZona, actual.idTirada);
             alertaPersonalizada = 'Validando zona $idZona con el servidor...';
           } else {
-            // UN JUGADOR: Asumimos 1er lugar directamente
             int puntos = MotorReglas.obtenerPuntos(idZona, 1, mapaActual: actual.tablero.capa.tipoMapa);
             nuevaPuntuacion += puntos;
             alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
@@ -313,21 +341,44 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
             puntuacion: nuevaPuntuacion,
             zonasCompletadas: nuevasZonas,
             estadoZonasGlobal: actual.estadoZonasGlobal,
-            turnoTerminado: true, // <-- ¡NUEVO! BLOQUEO ACTIVADO
+            turnoTerminado: true,
+            totalJugadores: actual.totalJugadores,
             mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando a los demás...'
           ));
         } else {
-          // UN JUGADOR (OFFLINE): Avanza el turno automáticamente como antes
-          emit(_generarNuevoTurno(
-            actual.tablero, 
-            nuevaPuntuacion, 
-            nuevasZonas,
-            estadoGlobal: actual.estadoZonasGlobal,
-            mensajeAlerta: alertaPersonalizada
-          ));
+          // UN JUGADOR (OFFLINE)
+          _verificarFinDePartida(actual, nuevaPuntuacion, emit, esOffline: true);
+          if (state is! JuegoTerminado) {
+            emit(_generarNuevoTurno(
+              actual.tablero, 
+              nuevaPuntuacion, 
+              nuevasZonas,
+              estadoGlobal: actual.estadoZonasGlobal,
+              mensajeAlerta: alertaPersonalizada
+            ));
+          }
         }
       }
     }
   }
 
+  // ==========================================================
+  // EVALUADOR DE FIN DE PARTIDA
+  // ==========================================================
+  void _verificarFinDePartida(JuegoEnProgreso actual, int nuevaPuntuacion, Emitter<JuegoState> emit, {bool esOffline = false}) {
+    int limite = 26;
+    if (actual.totalJugadores == 3) limite = 24;
+    else if (actual.totalJugadores == 4) limite = 22;
+    else if (actual.totalJugadores >= 5) limite = 20;
+
+    if (esOffline) {
+      if (actual.idTirada >= 22) {
+        emit(JuegoTerminado(actual.tablero, mensaje: '¡Juego Solitario Terminado! Has sobrevivido 22 turnos.', puntuacionFinal: nuevaPuntuacion, esVictoria: true));
+      }
+    } else {
+      if (nuevaPuntuacion >= limite) {
+        servicioRed!.declararVictoria(nuevaPuntuacion);
+      }
+    }
+  }
 }
