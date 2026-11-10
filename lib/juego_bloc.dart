@@ -73,22 +73,38 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         idTirada: tiradaActual + 1,
       ));
     }
-    // 3. EL SERVIDOR NOS AVISA QUE ALGUIEN MÁS LLENÓ UNA ZONA
+    // 3. EL SERVIDOR NOS AVISA QUE ALGUIEN MÁS (O NOSOTROS MISMOS) LLENÓ UNA ZONA
     else if (tipo == 'zona_reclamada' && state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
       final idZona = event.datos['idZona'];
-      final lugar = event.datos['lugar']; // 1, 2 o 3
+      final lugar = event.datos['lugar'];
+      final usuario = event.datos['usuario'];
 
-      // Actualizamos cómo va el mundo
       final nuevoEstadoGlobal = Map<String, int>.from(actual.estadoZonasGlobal);
       nuevoEstadoGlobal[idZona] = lugar;
 
-      emit(_generarNuevoTurno(
-        actual.tablero, 
-        actual.puntuacion, 
-        actual.zonasCompletadas,
-        estadoGlobal: nuevoEstadoGlobal,
-        mensajeAlerta: '¡Alguien reclamó la zona $idZona en lugar #$lugar!'
+      int nuevaPuntuacion = actual.puntuacion;
+      String alerta = '¡$usuario reclamó la zona $idZona en lugar #$lugar!';
+
+      // ¡SI EL AVISO ES PARA NOSOTROS, NOS SUMAMOS LOS PUNTOS EXACTOS!
+      if (servicioRed != null && usuario == servicioRed!.usuarioActual) {
+        int puntos = MotorReglas.obtenerPuntos(idZona, lugar, mapaActual: actual.tablero.capa.tipoMapa);
+        nuevaPuntuacion += puntos;
+        alerta = '¡Validado! Ganaste el lugar #$lugar en $idZona (+$puntos pts) 🏆';
+      }
+      // EL FIX: Emitimos el mismo estado en el que estábamos, solo actualizando puntos y el mapa global.
+      // NO llamamos a _generarNuevoTurno para no saltarle el turno al otro jugador.
+      emit(JuegoEnProgreso(
+        actual.tablero,
+        dado1: actual.dado1,                 // Mismos dados
+        dado2: actual.dado2,
+        idTirada: actual.idTirada,           // Mismo turno
+        anclaSeleccionada: actual.anclaSeleccionada, // Le respetamos si ya había tocado un dado
+        numeroAColocar: actual.numeroAColocar,
+        puntuacion: nuevaPuntuacion,         // Puntos sumados (si fuimos nosotros)
+        zonasCompletadas: actual.zonasCompletadas,
+        estadoZonasGlobal: nuevoEstadoGlobal, // Se atenúa el color en su pantalla
+        mensajeAlerta: alerta
       ));
     }
   }
@@ -233,19 +249,14 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
           nuevasZonas.add(idZona); 
 
-          // ¡EL FIX!: Calculamos y sumamos los puntos SIEMPRE (sea online u offline)
-          int puntos = MotorReglas.obtenerPuntosPrimeraVez(idZona);
-          nuevaPuntuacion += puntos;
-
           if (servicioRed != null) {
-            // MULTIJUGADOR: Avisamos al servidor para que atenúe el color a los demás
-            servicioRed!.enviarJugada({
-              'accion': 'reclamar_zona',
-              'idZona': idZona
-            });
-            alertaPersonalizada = '¡Zona $idZona completada! +$puntos pts (Sincronizando...)';
+            // MULTIJUGADOR: Mandamos nuestro turno para el desempate, pero NO nos sumamos puntos aún.
+            servicioRed!.reclamarZona(idZona, actual.idTirada);
+            alertaPersonalizada = 'Validando zona $idZona con el servidor...';
           } else {
-            // UN JUGADOR
+            // UN JUGADOR: Asumimos 1er lugar directamente
+            int puntos = MotorReglas.obtenerPuntos(idZona, 1, mapaActual: actual.tablero.capa.tipoMapa);
+            nuevaPuntuacion += puntos;
             alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
           }
         }

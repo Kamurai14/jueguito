@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ServicioMultiplayer {
   WebSocketChannel? _canal;
+  String? usuarioActual;
   
   // NUEVO: Creamos una variable para el stream compartido
   Stream<dynamic>? _streamBroadcast; 
@@ -29,6 +30,7 @@ class ServicioMultiplayer {
       if (token == null) return false;
 
       final urlFinal = Uri.parse('$_wsUrl?token=$token');
+      usuarioActual = await _almacenamientoSeguro.read(key: 'usuario_actual');
       _canal = WebSocketChannel.connect(urlFinal);
       
       // MAGIA AQUÍ: Convertimos el canal a "Broadcast" para que soporte múltiples oyentes
@@ -56,6 +58,14 @@ class ServicioMultiplayer {
   void enviarJugada(Map<String, dynamic> datosJugada) {
     datosJugada['accion'] = 'jugada';
     _enviar(datosJugada);
+  }
+
+  void reclamarZona(String idZona, int turnoLocal) {
+    _enviar({
+      'accion': 'reclamar_zona',
+      'idZona': idZona,
+      'turno': turnoLocal
+    });
   }
 
   void rendirse() {

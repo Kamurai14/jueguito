@@ -54,31 +54,52 @@ class MotorReglas {
     return true; 
   }
   // ==========================================================
-  // 2. SISTEMA DE PUNTUACIONES (Preparado para los 4 mapas)
+  // 2. SISTEMA DE PUNTUACIONES (Empates y Lugares Dinámicos)
   // ==========================================================
-  static int obtenerPuntosPrimeraVez(String idZona, {TipoMapa mapaActual = TipoMapa.mapa1}) {
+  static int obtenerPuntos(String idZona, int lugar, {TipoMapa mapaActual = TipoMapa.mapa1}) {
+    // Si llegan después del 3er lugar, ya no hay puntos
+    if (lugar < 1 || lugar > 3) return 0; 
     
-    // Ejemplo de cómo manejaremos los puntos dinámicos que me mencionaste.
-    // Cuando el BLoC nos pase que estamos en el Mapa 2, cambiamos los valores:
-    if (mapaActual == TipoMapa.mapa2) {
-      if (idZona.startsWith('AM')) return 6;
-      if (idZona.startsWith('AZ')) return 5;
-      // ... iremos llenando el resto después
-    } else if (mapaActual == TipoMapa.mapa3) {
-      if (idZona.startsWith('AM')) return 7;
+    // Función auxiliar para no repetir código (Índice 0 = 1ro, Índice 1 = 2do...)
+    int p(int p1, int p2, int p3) => [p1, p2, p3][lugar - 1];
+    
+    if (idZona.startsWith('AZ')) {
+      if (mapaActual == TipoMapa.mapa4) return p(8, 6, 4);
+      return p(7, 5, 3);
     }
-
-    // Puntuaciones por defecto (Mapa 1 y Mapa 4)
-    if (idZona.startsWith('AM')) return 8; // Amarilla
-    if (idZona.startsWith('AZ')) return 7; // Azul
-    if (idZona.startsWith('RO')) return 6; // Roja
-    if (idZona.startsWith('MO')) return 6; // Morada
-    if (idZona.startsWith('VE')) return 4; // Verde
     
-    // Puntuaciones base para los colores nuevos (ajústalas según tu diseño de juego)
-    if (idZona.startsWith('BL')) return 5; // Blanca
-    if (idZona.startsWith('NA')) return 6; // Naranja
-
+    if (idZona.startsWith('MO')) {
+      if (mapaActual == TipoMapa.mapa3 || mapaActual == TipoMapa.mapa4) return p(7, 5, 3);
+      return p(6, 4, 2);
+    }
+    
+    if (idZona.startsWith('VE')) {
+      if (mapaActual == TipoMapa.mapa3) return p(6, 5, 4);
+      if (mapaActual == TipoMapa.mapa4) return p(3, 2, 1);
+      return p(4, 3, 2);
+    }
+    
+    if (idZona.startsWith('AM')) {
+      if (mapaActual == TipoMapa.mapa2) return p(6, 4, 2);
+      if (mapaActual == TipoMapa.mapa3) return p(7, 5, 3);
+      return p(8, 6, 4); 
+    }
+    
+    if (idZona.startsWith('RO')) {
+      return p(6, 4, 2); // Rojo siempre vale igual
+    }
+    
+    if (idZona.startsWith('BL')) {
+      if (mapaActual == TipoMapa.mapa2) return p(3, 2, 1);
+      if (mapaActual == TipoMapa.mapa3) return p(8, 6, 4);
+      return 0; 
+    }
+    
+    if (idZona.startsWith('NA')) {
+      if (mapaActual == TipoMapa.mapa4) return p(6, 4, 3);
+      return 0;
+    }
+    
     return 0;
   }
 }
