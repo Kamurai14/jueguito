@@ -53,28 +53,27 @@ class _PantallaLoginState extends State<PantallaLogin> {
       resultado = await servicio.registrar(usuario, password);
       
       if (resultado['exito'] == true) {
-        setState(() {
-          _estaRegistrando = false;
-          _cargando = false;
-          _controladorPassword.clear();
-          _controladorConfirmarPassword.clear();
-        });
-        if (mounted) {
+        // 🔥 EL FIX: Inicio de sesión automático por debajo del agua
+        final resultadoLogin = await servicio.login(usuario, password);
+        
+        if (resultadoLogin['exito'] == true && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('¡Cuenta creada! Ahora inicia sesión.'), 
+              content: Text('¡Cuenta creada! Entrando a Brilliant...'), 
               backgroundColor: Colors.green
             ),
           );
+          // Le avisamos al BLoC que ya estamos listos y logueados
+          context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
+          return; 
         }
-        return; 
       }
     } else {
+      // Flujo de login normal
       resultado = await servicio.login(usuario, password);
       
       if (resultado['exito'] == true) {
         if (mounted) {
-          // Ya no navegamos a mano, solo le avisamos al BLoC y él hace la magia
           context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
         }
         return; 
@@ -82,7 +81,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
     }
 
     setState(() => _cargando = false);
-    _mostrarError(resultado['mensaje']);
+    _mostrarError(resultado['mensaje'] ?? 'Error desconocido');
   }
 
   void _mostrarError(String mensaje) {
