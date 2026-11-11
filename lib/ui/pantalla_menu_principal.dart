@@ -12,6 +12,7 @@ class PantallaMenuPrincipal extends StatelessWidget {
 
   void _cerrarSesion(BuildContext context) {
     context.read<AuthBloc>().add(CerrarSesionEvent());
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _confirmarBorrarCuenta(BuildContext context) {
@@ -33,6 +34,7 @@ class PantallaMenuPrincipal extends StatelessWidget {
               if (context.mounted) {
                 if (resultado['exito'] == true) {
                   context.read<AuthBloc>().add(CerrarSesionEvent());
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Cuenta eliminada'), backgroundColor: Colors.green),
                   );

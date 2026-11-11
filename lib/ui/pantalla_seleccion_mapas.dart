@@ -69,6 +69,7 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
   void _cerrarSesion() {
     // Le avisamos al BLoC Global y él nos manda al Login automáticamente
     context.read<AuthBloc>().add(CerrarSesionEvent());
+    Navigator.of(context).popUntil((route) => route.isFirst); // Volvemos a la raíz
   }
 
   void _confirmarBorrarCuenta() {
@@ -93,7 +94,7 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                 if (resultado['exito'] == true) {
                   // Si se borró en el server, mandamos el evento al BLoC para limpiar sesión y salir
                   context.read<AuthBloc>().add(CerrarSesionEvent());
-                  
+                  Navigator.of(context).popUntil((route) => route.isFirst);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Cuenta eliminada correctamente'), backgroundColor: Colors.green),
                   );
