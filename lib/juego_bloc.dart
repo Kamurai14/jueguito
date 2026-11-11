@@ -113,16 +113,18 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
     // 4. EL ANFITRIÓN CERRÓ LA SALA O NUESTRO INTERNET SE CAYÓ
     else if (tipo == 'sala_cerrada' || tipo == 'desconexion_local') {
-      // EL FIX: Si ya ganamos y el juego terminó, ignoramos la falsa alarma de desconexión
-      if (state is JuegoTerminado) return; 
-
-      servicioRed?.desconectar();
       
-      emit(JuegoEsperandoIniciales(
-        Tablero(state.tablero.capa), 
-        numerosColocados: 0,
-        mensajeAlerta: event.datos['razon'] ?? 'Desconectado de la partida.'
-      ));
+      // EL FIX: Esperamos una fracción de segundo para asegurarnos de que la victoria no venía en camino
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!isClosed && state is! JuegoTerminado) {
+          servicioRed?.desconectar();
+          emit(JuegoEsperandoIniciales(
+            Tablero(state.tablero.capa), 
+            numerosColocados: 0,
+            mensajeAlerta: event.datos['razon'] ?? 'Desconectado de la partida.'
+          ));
+        }
+      });
     }
     // 5. UN INVITADO ABANDONÓ LA SALA
     else if (tipo == 'jugador_abandono') {
@@ -153,9 +155,20 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
     // 6. VICTORIA POR ABANDONO
     else if (tipo == 'victoria_por_abandono') {
+      int puntos = (state is JuegoEnProgreso)
+          ? (state as JuegoEnProgreso).puntuacion
+          : 0;
+      // PRIMERO emitimos la victoria para que la pantalla del trofeo se pinte segura
+      emit(
+        JuegoTerminado(
+          state.tablero,
+          mensaje: event.datos['mensaje'],
+          puntuacionFinal: puntos,
+          esVictoria: true,
+        ),
+      );
+      // DESPUÉS desconectamos la red con calma, ya con el trofeo a salvo en pantalla
       servicioRed?.desconectar();
-      int puntos = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
-      emit(JuegoTerminado(state.tablero, mensaje: event.datos['mensaje'], puntuacionFinal: puntos, esVictoria: true));
     }
     // 7. FIN DE PARTIDA GLOBAL (ONLINE)
     else if (tipo == 'fin_de_partida') {
