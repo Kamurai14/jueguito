@@ -6,13 +6,22 @@ import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
 import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/ui/pantalla_lobby.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
 
 class PantallaMenuPrincipal extends StatelessWidget {
   const PantallaMenuPrincipal({super.key});
 
-  void _cerrarSesion(BuildContext context) {
+ // El arma nuclear para matar zombies de Flutter
+  void _forzarSalida(BuildContext context) {
     context.read<AuthBloc>().add(CerrarSesionEvent());
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const PantallaLogin()),
+      (Route<dynamic> route) => false, // false = destruye todo el historial hacia atrás
+    );
+  }
+
+  void _cerrarSesion(BuildContext context) {
+    _forzarSalida(context);
   }
 
   void _confirmarBorrarCuenta(BuildContext context) {
@@ -31,12 +40,13 @@ class PantallaMenuPrincipal extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(context); 
               final resultado = await ServicioAuth().borrarCuenta();
+              
               if (context.mounted) {
-                if (resultado['exito'] == true) {
-                  context.read<AuthBloc>().add(CerrarSesionEvent());
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                // Si se borró en el server, O si ya estábamos en estado zombie sin token
+                if (resultado['exito'] == true || resultado['mensaje'] == 'No hay sesión activa') {
+                  _forzarSalida(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cuenta eliminada'), backgroundColor: Colors.green),
+                    const SnackBar(content: Text('Cuenta eliminada / Sesión cerrada'), backgroundColor: Colors.green),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(

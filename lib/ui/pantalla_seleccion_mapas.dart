@@ -4,6 +4,7 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
+import 'package:jueguito/ui/pantalla_login.dart';
 
 // --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
@@ -66,10 +67,16 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
   }
 
-  void _cerrarSesion() {
-    // Le avisamos al BLoC Global y él nos manda al Login automáticamente
+  void _forzarSalida() {
     context.read<AuthBloc>().add(CerrarSesionEvent());
-    Navigator.of(context).popUntil((route) => route.isFirst); // Volvemos a la raíz
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const PantallaLogin()),
+      (Route<dynamic> route) => false,
+    );
+  }
+
+  void _cerrarSesion() {
+    _forzarSalida();
   }
 
   void _confirmarBorrarCuenta() {
@@ -91,12 +98,10 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
               final resultado = await ServicioAuth().borrarCuenta();
               
               if (mounted) {
-                if (resultado['exito'] == true) {
-                  // Si se borró en el server, mandamos el evento al BLoC para limpiar sesión y salir
-                  context.read<AuthBloc>().add(CerrarSesionEvent());
-                  Navigator.of(context).popUntil((route) => route.isFirst);
+                if (resultado['exito'] == true || resultado['mensaje'] == 'No hay sesión activa') {
+                  _forzarSalida();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cuenta eliminada correctamente'), backgroundColor: Colors.green),
+                    const SnackBar(content: Text('Cuenta eliminada / Sesión cerrada'), backgroundColor: Colors.green),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
