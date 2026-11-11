@@ -13,11 +13,11 @@ class ServicioMultiplayer {
   // Esto nos permite "inyectar" mensajes artificiales cuando se cae el internet
   StreamController<dynamic>? _controladorStream; 
   
-  final bool _esProduccion = false;
+  final bool _esProduccion = true;
   final _almacenamientoSeguro = const FlutterSecureStorage();
 
   String get _wsUrl {
-    if (_esProduccion) return 'wss://api.tujuego.com/ws';
+    if (_esProduccion) return 'wss://servidor-jueguito-brilliant.onrender.com/ws';
     if (!kIsWeb && Platform.isAndroid) return 'ws://10.0.2.2:8080/ws';
     return 'ws://127.0.0.1:8080/ws';
   }

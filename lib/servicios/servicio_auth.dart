@@ -6,11 +6,11 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ServicioAuth {
- final bool _esProduccion = false; 
+ final bool _esProduccion = true; 
   
   // URL dinámica para que funcione tanto en Windows como en el Emulador Android
   String get _baseUrl {
-    if (_esProduccion) return 'https://api.tujuego.com';
+    if (_esProduccion) return 'https://servidor-jueguito-brilliant.onrender.com';
     if (!kIsWeb && Platform.isAndroid) return 'http://10.0.2.2:8080'; // Ruta especial para emulador
     return 'http://127.0.0.1:8080'; // Ruta para escritorio Windows
   }

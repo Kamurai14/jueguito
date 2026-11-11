@@ -113,6 +113,9 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     }
     // 4. EL ANFITRIÓN CERRÓ LA SALA O NUESTRO INTERNET SE CAYÓ
     else if (tipo == 'sala_cerrada' || tipo == 'desconexion_local') {
+      // EL FIX: Si ya ganamos y el juego terminó, ignoramos la falsa alarma de desconexión
+      if (state is JuegoTerminado) return; 
+
       servicioRed?.desconectar();
       
       emit(JuegoEsperandoIniciales(
