@@ -45,6 +45,10 @@ class _PantallaLoginState extends State<PantallaLogin> {
       }
     }
 
+    // EL FIX: Capturamos el Bloc y el ScaffoldMessenger ANTES de que el código se duerma
+    final authBloc = context.read<AuthBloc>();
+    final mensajero = ScaffoldMessenger.of(context);
+
     setState(() => _cargando = true);
     final servicio = ServicioAuth();
     Map<String, dynamic> resultado;
@@ -53,19 +57,17 @@ class _PantallaLoginState extends State<PantallaLogin> {
       resultado = await servicio.registrar(usuario, password);
       
       if (resultado['exito'] == true) {
-        // 🔥 EL FIX: Inicio de sesión automático por debajo del agua
         final resultadoLogin = await servicio.login(usuario, password);
         
-        if (resultadoLogin['exito'] == true && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Cuenta creada! Entrando a Brilliant...'), 
-              backgroundColor: Colors.green
-            ),
+        if (resultadoLogin['exito'] == true) {
+          mensajero.showSnackBar(
+            const SnackBar(content: Text('¡Cuenta creada! Entrando a Brilliant...'), backgroundColor: Colors.green),
           );
-          // Le avisamos al BLoC que ya estamos listos y logueados
-          context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
+          // Le avisamos al BLoC y él se encarga de cambiar la pantalla automáticamente
+          authBloc.add(IniciarSesionEvent(usuario));
           return; 
+        } else {
+          resultado = resultadoLogin; // Si el auto-login falla, guardamos el error
         }
       }
     } else {
@@ -73,15 +75,18 @@ class _PantallaLoginState extends State<PantallaLogin> {
       resultado = await servicio.login(usuario, password);
       
       if (resultado['exito'] == true) {
-        if (mounted) {
-          context.read<AuthBloc>().add(IniciarSesionEvent(usuario));
-        }
+        authBloc.add(IniciarSesionEvent(usuario));
         return; 
       }
     }
 
-    setState(() => _cargando = false);
-    _mostrarError(resultado['mensaje'] ?? 'Error desconocido');
+    // Si hubo error, quitamos el cargando y mostramos la alerta
+    if (mounted) {
+      setState(() => _cargando = false);
+      mensajero.showSnackBar(
+        SnackBar(content: Text(resultado['mensaje'] ?? 'Error desconocido'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   void _mostrarError(String mensaje) {

@@ -4,7 +4,6 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
 
 // --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
@@ -67,48 +66,38 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
   }
 
-  void _forzarSalida() {
+ void _cerrarSesion() {
     context.read<AuthBloc>().add(CerrarSesionEvent());
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const PantallaLogin()),
-      (Route<dynamic> route) => false,
-    );
-  }
-
-  void _cerrarSesion() {
-    _forzarSalida();
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _confirmarBorrarCuenta() {
+    final authBloc = context.read<AuthBloc>();
+    final navegador = Navigator.of(context);
+    final mensajero = ScaffoldMessenger.of(context);
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('¿Borrar cuenta?'),
         content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancelar'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              Navigator.pop(context); 
+              Navigator.pop(dialogContext); 
               
-              final resultado = await ServicioAuth().borrarCuenta();
+              await ServicioAuth().borrarCuenta();
               
-              if (mounted) {
-                if (resultado['exito'] == true || resultado['mensaje'] == 'No hay sesión activa') {
-                  _forzarSalida();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cuenta eliminada / Sesión cerrada'), backgroundColor: Colors.green),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(resultado['mensaje']), backgroundColor: Colors.red),
-                  );
-                }
-              }
+              authBloc.add(CerrarSesionEvent());
+              navegador.popUntil((route) => route.isFirst);
+              mensajero.showSnackBar(
+                const SnackBar(content: Text('Cuenta eliminada'), backgroundColor: Colors.green),
+              );
             },
             child: const Text('Sí, borrar mi cuenta'),
           ),

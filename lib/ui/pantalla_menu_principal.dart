@@ -6,54 +6,43 @@ import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
 import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/ui/pantalla_lobby.dart';
-import 'package:jueguito/ui/pantalla_login.dart';
 
 class PantallaMenuPrincipal extends StatelessWidget {
   const PantallaMenuPrincipal({super.key});
 
- // El arma nuclear para matar zombies de Flutter
-  void _forzarSalida(BuildContext context) {
-    context.read<AuthBloc>().add(CerrarSesionEvent());
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const PantallaLogin()),
-      (Route<dynamic> route) => false, // false = destruye todo el historial hacia atrás
-    );
-  }
 
   void _cerrarSesion(BuildContext context) {
-    _forzarSalida(context);
+    context.read<AuthBloc>().add(CerrarSesionEvent());
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _confirmarBorrarCuenta(BuildContext context) {
+    final authBloc = context.read<AuthBloc>();
+    final navegador = Navigator.of(context);
+    final mensajero = ScaffoldMessenger.of(context);
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('¿Borrar cuenta?'),
         content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancelar'),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              Navigator.pop(context); 
-              final resultado = await ServicioAuth().borrarCuenta();
+              Navigator.pop(dialogContext); 
               
-              if (context.mounted) {
-                // Si se borró en el server, O si ya estábamos en estado zombie sin token
-                if (resultado['exito'] == true || resultado['mensaje'] == 'No hay sesión activa') {
-                  _forzarSalida(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cuenta eliminada / Sesión cerrada'), backgroundColor: Colors.green),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(resultado['mensaje']), backgroundColor: Colors.red),
-                  );
-                }
-              }
+              await ServicioAuth().borrarCuenta();
+              
+              authBloc.add(CerrarSesionEvent());
+              navegador.popUntil((route) => route.isFirst);
+              mensajero.showSnackBar(
+                const SnackBar(content: Text('Cuenta eliminada'), backgroundColor: Colors.green),
+              );
             },
             child: const Text('Sí, borrar'),
           ),
