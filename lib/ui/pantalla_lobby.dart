@@ -75,7 +75,19 @@ class _PantallaLobbyState extends State<PantallaLobby> {
               );
             }
             break;
-            
+          
+          case 'sala_cerrada':
+          _saliendoVoluntariamente = true; 
+          _servicio.desconectar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(datos['razon'] ?? 'El anfitrión cerró la sala.'), 
+              backgroundColor: Colors.red
+            ),
+          );
+          Navigator.pop(context); // Saca al jugador de vuelta al menú
+          break;
+
           case 'error':
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(datos['mensaje']), backgroundColor: Colors.red),

@@ -36,43 +36,75 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blueGrey[900], 
-      key: const Key('pantalla_tablero_scaffold'),
-      appBar: AppBar(
-        backgroundColor: Colors.blueGrey[900], 
-        foregroundColor: Colors.white, 
-        elevation: 0,
-        title: const Text('Juego 7x7'),
-      ),
-      body: Center(
-        child: BlocBuilder<JuegoBloc, JuegoState>(
-          builder: (context, state) {
-            
-            // ==========================================
-            // PANTALLA DE RESULTADOS (GAME OVER)
-            // ==========================================
-            if (state is JuegoTerminado) {
-              return _buildPantallaResultados(context, state);
-            }
+    return PopScope(
+      canPop: false, // Evita que el usuario salga inmediatamente
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        
+        // 1. Lanzamos la advertencia de rendición
+        final salir = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('¿Abandonar partida?'),
+            content: const Text('Si te sales ahora perderás la partida y se le dará la victoria a tus rivales.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false), 
+                child: const Text('Cancelar')
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: () => Navigator.pop(context, true), 
+                child: const Text('Sí, rendirme')
+              ),
+            ],
+          ),
+        );
 
-            // ==========================================
-            // TABLERO NORMAL DE JUEGO
-            // ==========================================
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CabeceraJuego(state: state),
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1, 
-                    child: CuadriculaTablero(state: state, animController: _animController),
+        // 2. Si confirma, dispara la rendición al backend y lo manda al menú principal
+        if (salir == true && context.mounted) {
+          context.read<JuegoBloc>().servicioRed?.rendirse();
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.blueGrey[900], 
+        key: const Key('pantalla_tablero_scaffold'),
+        appBar: AppBar(
+          backgroundColor: Colors.blueGrey[900], 
+          foregroundColor: Colors.white, 
+          elevation: 0,
+          title: const Text('Juego 7x7'),
+        ),
+        body: Center(
+          child: BlocBuilder<JuegoBloc, JuegoState>(
+            builder: (context, state) {
+              
+              // ==========================================
+              // PANTALLA DE RESULTADOS (GAME OVER)
+              // ==========================================
+              if (state is JuegoTerminado) {
+                return _buildPantallaResultados(context, state);
+              }
+
+              // ==========================================
+              // TABLERO NORMAL DE JUEGO
+              // ==========================================
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CabeceraJuego(state: state),
+                  Expanded(
+                    child: AspectRatio(
+                      aspectRatio: 1, 
+                      child: CuadriculaTablero(state: state, animController: _animController),
+                    ),
                   ),
-                ),
-                PanelControles(state: state),
-              ],
-            );
-          },
+                  PanelControles(state: state),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
