@@ -1,4 +1,4 @@
-import 'dart:async'; // Necesario para el StreamController
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -8,9 +8,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ServicioMultiplayer {
   WebSocketChannel? _canal;
   String? usuarioActual;
-  
-  // Usamos un StreamController en lugar de un asBroadcastStream directo
-  // Esto nos permite "inyectar" mensajes artificiales cuando se cae el internet
   StreamController<dynamic>? _controladorStream; 
   
   final bool _esProduccion = true;
@@ -22,35 +19,40 @@ class ServicioMultiplayer {
     return 'ws://127.0.0.1:8080/ws';
   }
 
-  // Exponemos el stream del controlador
   Stream<dynamic>? get streamMensajes => _controladorStream?.stream;
 
-  Future<bool> conectar() async {
+  // Función conectar CON el parámetro para invitados
+  Future<bool> conectar({String? nombreInvitado}) async {
     try {
-      final token = await _almacenamientoSeguro.read(key: 'jwt_token');
-      if (token == null) return false;
+      String urlFinal;
 
-      final urlFinal = Uri.parse('$_wsUrl?token=$token');
-      usuarioActual = await _almacenamientoSeguro.read(key: 'usuario_actual');
-      _canal = WebSocketChannel.connect(urlFinal);
+      if (nombreInvitado != null) {
+        // Flujo para Invitados: Usamos el parámetro ?invitado=
+        urlFinal = '$_wsUrl?invitado=$nombreInvitado';
+        usuarioActual = nombreInvitado;
+      } else {
+        // Flujo normal para Registrados: Buscamos y usamos el ?token=
+        final token = await _almacenamientoSeguro.read(key: 'jwt_token');
+        if (token == null) return false;
+        urlFinal = '$_wsUrl?token=$token';
+        usuarioActual = await _almacenamientoSeguro.read(key: 'usuario_actual');
+      }
+
+      _canal = WebSocketChannel.connect(Uri.parse(urlFinal));
       
-      // Inicializamos el controlador como Broadcast
       _controladorStream = StreamController<dynamic>.broadcast();
       
-      // Escuchamos el socket y pasamos los mensajes al controlador
       _canal!.stream.listen(
         (mensaje) {
           _controladorStream?.add(mensaje);
         },
         onDone: () {
-          // SI SE CORTA EL INTERNET O EL SERVIDOR SE APAGA:
           _controladorStream?.add(jsonEncode({
             'tipo': 'desconexion_local', 
             'razon': 'Se perdió la conexión con el servidor.'
           }));
         },
         onError: (error) {
-          // SI HAY UN ERROR DE RED BRUSCO:
           _controladorStream?.add(jsonEncode({
             'tipo': 'desconexion_local', 
             'razon': 'Error de red inesperado.'

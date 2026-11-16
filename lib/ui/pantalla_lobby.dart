@@ -6,6 +6,8 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
+import 'package:jueguito/auth_bloc.dart';
+import 'package:jueguito/auth_state.dart';
 
 class PantallaLobby extends StatefulWidget {
   const PantallaLobby({super.key});
@@ -34,8 +36,18 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   }
 
   Future<void> _iniciarConexion() async {
-    final exito = await _servicio.conectar();
-    if (!mounted) return; 
+    // Extraemos el nombre si estamos en modo invitado
+    final authState = context.read<AuthBloc>().state;
+    String? nombreInvitado;
+
+    if (authState is AuthInvitado) {
+      nombreInvitado = authState.usuario;
+    }
+
+    // Le pasamos el nombre a la conexión
+    final exito = await _servicio.conectar(nombreInvitado: nombreInvitado);
+
+    if (!mounted) return;
 
     if (exito) {
       setState(() {

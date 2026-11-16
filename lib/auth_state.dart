@@ -13,4 +13,7 @@ class AuthAutenticado extends AuthState {
 }
 
 // Modo sin cuenta (Invitado)
-class AuthInvitado extends AuthState {}
+class AuthInvitado extends AuthState {
+final String usuario;
+AuthInvitado(this.usuario);
+}

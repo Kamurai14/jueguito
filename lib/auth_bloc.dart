@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jueguito/auth_event.dart';
 import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
+import 'dart:math';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ServicioAuth _servicioAuth = ServicioAuth();
@@ -30,8 +31,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthAutenticado(event.usuario));
   }
 
-  void _onEntrarComoInvitado(EntrarComoInvitado event, Emitter<AuthState> emit) {
-    emit(AuthInvitado());
+  void _onEntrarComoInvitado(
+    EntrarComoInvitado event,
+    Emitter<AuthState> emit,
+  ) {
+    final numeroAleatorio = Random().nextInt(9000) + 1000;
+    final nombreInvitado = 'Anonimo$numeroAleatorio';
+    emit(AuthInvitado(nombreInvitado));
   }
 
   void _onCerrarSesion(CerrarSesionEvent event, Emitter<AuthState> emit) async {
