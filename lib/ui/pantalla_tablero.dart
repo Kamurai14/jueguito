@@ -13,6 +13,7 @@ import 'package:jueguito/ui/tema_juego.dart';
 import 'package:jueguito/ui/cabecera_juego.dart';
 import 'package:jueguito/ui/cuadricula_tablero.dart';
 import 'package:jueguito/ui/panel_controles.dart';
+import 'package:jueguito/ui/mini_tablero.dart'; 
 
 class PantallaTablero extends StatefulWidget {
   const PantallaTablero({super.key});
@@ -46,24 +47,22 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.blueGrey[900],
-      isScrollControlled: true, // Para que se adapte si hay muchas reglas
+      isScrollControlled: true, 
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (context) {
         List<Widget> reglas = [];
 
-        // Función ayudante que consulta tu MotorReglas en vivo
         void agregar(String idZona, String simbolo, String desc) {
           int p1 = MotorReglas.obtenerPuntos(idZona, 1, mapaActual: mapa);
           int p2 = MotorReglas.obtenerPuntos(idZona, 2, mapaActual: mapa);
           int p3 = MotorReglas.obtenerPuntos(idZona, 3, mapaActual: mapa);
           
-          if (p1 > 0) { // Solo dibujamos la regla si la zona da puntos en este mapa
-            Color color = TemaJuego.obtenerColorZona(idZona, 0); // Color vivo (sin atenuar)
+          if (p1 > 0) { 
+            Color color = TemaJuego.obtenerColorZona(idZona, 0); 
             reglas.add(_buildReglaItem(simbolo, color, [p1, p2, p3], desc));
           }
         }
 
-        // Mapeo automático basado en los 4 mapas disponibles
         if (mapa == TipoMapa.mapa1) {
           agregar('AZ1', '=', 'Iguales');
           agregar('MO1', 'XO', 'Máx 2');
@@ -100,7 +99,6 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Barrita gris superior clásica de los BottomSheet
                 Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.white30, borderRadius: BorderRadius.circular(10))),
                 const SizedBox(height: 20),
                 const Text('GUÍA DE PUNTUACIONES', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2)),
@@ -120,12 +118,10 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     );
   }
 
-  // Diseño idéntico a las fotos que enviaste (Gema + 3 Fichas de puntos debajo)
   Widget _buildReglaItem(String simbolo, Color colorBase, List<int> puntos, String desc) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 1. El icono principal (El Dado/Gema)
         Container(
           width: 55,
           height: 55,
@@ -141,13 +137,11 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              // Si el fondo es muy claro (blanco o amarillo), oscurecemos el texto
               color: (colorBase == Colors.white || colorBase == Colors.yellowAccent[400]) ? Colors.black87 : Colors.white,
             ),
           ),
         ),
         const SizedBox(height: 6),
-        // 2. Los tres valores de puntuación anidados
         Row(
           mainAxisSize: MainAxisSize.min,
           children: puntos.map((p) => Container(
@@ -155,7 +149,6 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: BoxDecoration(
               color: colorBase.withValues(alpha: 0.3),
-              // Forma ligeramente puntiaguda en la base, imitando la imagen
               borderRadius: const BorderRadius.vertical(top: Radius.circular(8), bottom: Radius.circular(4)), 
               border: Border.all(color: colorBase, width: 1.5)
             ),
@@ -166,9 +159,54 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
           )).toList(),
         ),
         const SizedBox(height: 6),
-        // 3. Descripción corta
         Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 11)),
       ],
+    );
+  }
+
+  // ==========================================
+  // PANEL SUPERIOR: MAPAS DE LOS RIVALES
+  // ==========================================
+  Widget _buildPanelRivales(BuildContext context, JuegoEnProgreso estado) {
+    if (estado.tablerosRivales.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      height: 115, 
+      margin: const EdgeInsets.only(bottom: 8.0),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        itemCount: estado.tablerosRivales.length,
+        itemBuilder: (context, index) {
+          String rival = estado.tablerosRivales.keys.elementAt(index);
+          List<dynamic> tableroRival = estado.tablerosRivales[rival] ?? [];
+          int puntosRival = estado.puntuacionesRivales[rival] ?? 0;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                MiniTablero(
+                  valores: tableroRival, 
+                  capa: estado.tablero.capa, 
+                  tamanoCasilla: 9.0 // Cuadrito chiquito
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  rival, 
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '$puntosRival pts', 
+                  style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -212,24 +250,21 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
           elevation: 0,
           title: const Text('Juego 7x7'),
           actions: [
-            // AQUÍ ESTÁ EL MENÚ OCULTO: 
-            // Un sutil ícono de ayuda que despliega las puntuaciones
             BlocBuilder<JuegoBloc, JuegoState>(
               builder: (context, state) {
                 return IconButton(
                   icon: const Icon(Icons.help_outline),
                   tooltip: 'Ver reglas y puntos',
                   onPressed: () {
-                    // Extraemos el tipo de mapa actual y se lo pasamos al menú
                     _mostrarMenuReglas(context, state.tablero.capa.tipoMapa);
                   },
                 );
               },
             ),
-            const SizedBox(width: 8), // Margen derecho
+            const SizedBox(width: 8), 
           ],
         ),
-        body: Center(
+        body: SafeArea(
           child: BlocBuilder<JuegoBloc, JuegoState>(
             builder: (context, state) {
               
@@ -241,10 +276,16 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CabeceraJuego(state: state),
+                  // AQUÍ INSERTAMOS A LOS RIVALES
+                  if (state is JuegoEnProgreso) _buildPanelRivales(context, state),
+                  
                   Expanded(
                     child: AspectRatio(
                       aspectRatio: 1, 
-                      child: CuadriculaTablero(state: state, animController: _animController),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: CuadriculaTablero(state: state, animController: _animController),
+                      ),
                     ),
                   ),
                   PanelControles(state: state),
@@ -257,47 +298,109 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     );
   }
 
+  // ==========================================
+  // PANTALLA FINAL (PODIO CON MINIMAPAS)
+  // ==========================================
   Widget _buildPantallaResultados(BuildContext context, JuegoTerminado estado) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            estado.esVictoria ? Icons.emoji_events : Icons.sentiment_dissatisfied,
-            size: 120,
-            color: estado.esVictoria ? Colors.amber : Colors.grey,
-          ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Text(
             estado.esVictoria ? '¡VICTORIA!' : 'FIN DEL JUEGO',
             style: TextStyle(
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: FontWeight.w900,
               color: estado.esVictoria ? Colors.amber : Colors.white,
               letterSpacing: 2,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Text(
             estado.mensaje,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, color: Colors.white70),
+            style: const TextStyle(fontSize: 18, color: Colors.white70),
           ),
-          const SizedBox(height: 30),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            decoration: BoxDecoration(
-              color: Colors.blue[900],
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 5))]
-            ),
-            child: Text(
-              'Puntuación Final: ${estado.puntuacionFinal}',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 50),
+          const SizedBox(height: 20),
+          
+          // PODIO MULTIJUGADOR
+          if (estado.rankingFinal != null && estado.rankingFinal!.isNotEmpty)
+            Expanded(
+              child: ListView.builder(
+                itemCount: estado.rankingFinal!.length,
+                itemBuilder: (context, index) {
+                  final jugador = estado.rankingFinal![index];
+                  bool esPrimero = index == 0;
+                  
+                  return Card(
+                    color: esPrimero ? Colors.amber.withValues(alpha: 0.2) : Colors.blueGrey[800],
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      side: BorderSide(color: esPrimero ? Colors.amber : Colors.transparent, width: 2)
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            '#${index + 1}',
+                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: esPrimero ? Colors.amber : Colors.white54),
+                          ),
+                          const SizedBox(width: 16),
+                          MiniTablero(
+                            valores: jugador['tablero'] ?? [],
+                            capa: estado.tablero.capa,
+                            tamanoCasilla: 9.0, // Mapa en el podio
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(jugador['usuario'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                                Text('${jugador['puntuacion']} pts', style: const TextStyle(fontSize: 16, color: Colors.amber)),
+                              ],
+                            ),
+                          ),
+                          if (esPrimero) const Icon(Icons.emoji_events, color: Colors.amber, size: 40),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          else ...[
+            // MODO UN JUGADOR (OFFLINE)
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    estado.esVictoria ? Icons.emoji_events : Icons.sentiment_dissatisfied,
+                    size: 100,
+                    color: estado.esVictoria ? Colors.amber : Colors.grey,
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[900],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Puntuación Final: ${estado.puntuacionFinal}',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          ],
+          
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             icon: const Icon(Icons.home),
             label: const Text('Volver al Menú', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

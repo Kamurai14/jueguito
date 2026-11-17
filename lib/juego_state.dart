@@ -41,11 +41,15 @@ class JuegoEnProgreso extends JuegoState {
   final int idTirada;
   
   final int puntuacion;
-  final Set<String> zonasCompletadas; // Zonas que TÚ ya llenaste
-  final Map<String, int> estadoZonasGlobal; // NUEVO: Zonas reclamadas por TODOS { 'AM': 1, 'NA1': 3 }
+  final Set<String> zonasCompletadas; 
+  final Map<String, int> estadoZonasGlobal; 
   final String? mensajeAlerta;
-  final bool turnoTerminado; // <-- NUEVO: Bandera de bloqueo
+  final bool turnoTerminado; 
   final int totalJugadores;
+  
+  // Nuevos campos
+  final Map<String, dynamic> tablerosRivales;
+  final Map<String, dynamic> puntuacionesRivales;
 
   JuegoEnProgreso(
     super.tablero, {
@@ -56,10 +60,12 @@ class JuegoEnProgreso extends JuegoState {
     this.numeroAColocar,
     this.puntuacion = 0,
     this.zonasCompletadas = const {},
-    this.estadoZonasGlobal = const {}, // Inicia vacío
+    this.estadoZonasGlobal = const {}, 
     this.mensajeAlerta,
-    this.turnoTerminado = false, // Por defecto, el turno no está terminado
-    this.totalJugadores = 1, // Por defecto, un jugador
+    this.turnoTerminado = false, 
+    this.totalJugadores = 1, 
+    this.tablerosRivales = const {},
+    this.puntuacionesRivales = const {},
   });
 }
 
@@ -67,6 +73,12 @@ class JuegoTerminado extends JuegoState {
   final String mensaje;
   final int puntuacionFinal;
   final bool esVictoria;
+  final List<dynamic>? rankingFinal; // Nuevo campo
 
-  JuegoTerminado(super.tablero, {required this.mensaje, required this.puntuacionFinal, required this.esVictoria});
+  JuegoTerminado(super.tablero, {
+    required this.mensaje, 
+    required this.puntuacionFinal, 
+    required this.esVictoria,
+    this.rankingFinal
+  });
 }

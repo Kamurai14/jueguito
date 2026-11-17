@@ -118,8 +118,12 @@ class ServicioMultiplayer {
     _enviar({'accion': 'tirar_dados'});
   }
 
-  void terminarTurno() {
-    _enviar({'accion': 'terminar_turno'});
+  void terminarTurno(List<int?> tablero, int puntuacion) {
+    _enviar({
+      'accion': 'terminar_turno',
+      'tablero': tablero,
+      'puntuacion': puntuacion
+    });
   }
 
   void declararVictoria(int puntuacion) {

@@ -56,7 +56,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         total: event.datos['total']
       ));
     } 
-    // 2. EL SERVIDOR NOS MANDA LOS MISMOS DADOS A TODOS
+    // 2. EL SERVIDOR NOS MANDA LOS PRIMEROS DADOS (Al iniciar la partida)
     else if (tipo == 'nuevos_dados') {
       int tiradaActual = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).idTirada : 0;
       int puntosActuales = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
@@ -75,46 +75,60 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         totalJugadores: totalJugadores,
       ));
     }
-    // 3. EL SERVIDOR NOS AVISA QUE ALGUIEN MÁS (O NOSOTROS MISMOS) LLENÓ UNA ZONA
-    else if (tipo == 'zona_reclamada' && state is JuegoEnProgreso) {
+    // 3. EL SERVIDOR NOS MANDA EL RESUMEN DEL TURNO COMPLETO
+    else if (tipo == 'resumen_turno' && state is JuegoEnProgreso) {
       final actual = state as JuegoEnProgreso;
-      final idZona = event.datos['idZona'];
-      final lugar = event.datos['lugar'];
-      final usuario = event.datos['usuario'];
-
-      final nuevoEstadoGlobal = Map<String, int>.from(actual.estadoZonasGlobal);
-      nuevoEstadoGlobal[idZona] = lugar;
-
-      int nuevaPuntuacion = actual.puntuacion;
-      String alerta = '¡$usuario reclamó la zona $idZona en lugar #$lugar!';
-
-      if (servicioRed != null && usuario == servicioRed!.usuarioActual) {
-        int puntos = MotorReglas.obtenerPuntos(idZona, lugar, mapaActual: actual.tablero.capa.tipoMapa);
-        nuevaPuntuacion += puntos;
-        alerta = '¡Validado! Ganaste el lugar #$lugar en $idZona (+$puntos pts) 🏆';
-        
-        _verificarFinDePartida(actual, nuevaPuntuacion, emit, esOffline: false);
-      }
+      int tiradaActual = actual.idTirada;
       
-      emit(JuegoEnProgreso(
-        actual.tablero,
-        dado1: actual.dado1,                 
-        dado2: actual.dado2,
-        idTirada: actual.idTirada,           
-        anclaSeleccionada: actual.anclaSeleccionada, 
-        numeroAColocar: actual.numeroAColocar,
-        puntuacion: nuevaPuntuacion,         
-        zonasCompletadas: actual.zonasCompletadas,
-        estadoZonasGlobal: nuevoEstadoGlobal, 
-        turnoTerminado: actual.turnoTerminado, 
-        totalJugadores: actual.totalJugadores,
-        mensajeAlerta: alerta
-      ));
+      Map<String, int> nuevoEstadoGlobal = Map<String, int>.from(actual.estadoZonasGlobal);
+      String alertasGlobales = '';
+
+      // Procesar los avisos acumulados en el turno
+      List avisos = event.datos['avisos_zonas'] ?? [];
+      for (var aviso in avisos) {
+        String idZona = aviso['idZona'];
+        int lugar = aviso['lugar'];
+        String usuario = aviso['usuario'];
+
+        nuevoEstadoGlobal[idZona] = lugar;
+
+        // Solo generamos aviso visual para los rivales, el nuestro ya nos lo dio al instante
+        if (servicioRed != null && usuario != servicioRed!.usuarioActual) {
+          alertasGlobales += 'Aviso: $usuario llenó $idZona ocupando el lugar $lugar.\n';
+        }
+      }
+
+      // Separar la información de los rivales (Mapas dinámicos de Dart)
+      Map<String, dynamic> tRivales = Map<String, dynamic>.from(event.datos['tableros']);
+      Map<String, dynamic> pRivales = Map<String, dynamic>.from(event.datos['puntuaciones']);
+      
+      if (servicioRed != null) {
+        // Quitamos nuestros propios datos para no vernos en la sección de rivales
+        tRivales.remove(servicioRed!.usuarioActual);
+        pRivales.remove(servicioRed!.usuarioActual);
+      }
+
+      // Evaluamos victoria aquí si alguien alcanzó el límite
+      _verificarFinDePartida(actual, actual.puntuacion, emit, esOffline: false);
+      
+      if (state is! JuegoTerminado) {
+        emit(JuegoEnProgreso(
+          actual.tablero,
+          dado1: event.datos['dado1'],
+          dado2: event.datos['dado2'],
+          puntuacion: actual.puntuacion,
+          zonasCompletadas: actual.zonasCompletadas,
+          estadoZonasGlobal: nuevoEstadoGlobal,
+          idTirada: tiradaActual + 1,
+          totalJugadores: actual.totalJugadores,
+          tablerosRivales: tRivales,
+          puntuacionesRivales: pRivales,
+          mensajeAlerta: alertasGlobales.isNotEmpty ? alertasGlobales.trim() : 'Turno nuevo disponible.',
+        ));
+      }
     }
     // 4. EL ANFITRIÓN CERRÓ LA SALA O NUESTRO INTERNET SE CAYÓ
     else if (tipo == 'sala_cerrada' || tipo == 'desconexion_local') {
-      
-      // EL FIX: Esperamos una fracción de segundo para asegurarnos de que la victoria no venía en camino
       Future.delayed(const Duration(milliseconds: 100), () {
         if (!isClosed && state is! JuegoTerminado) {
           servicioRed?.desconectar();
@@ -149,16 +163,15 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           estadoZonasGlobal: actual.estadoZonasGlobal,
           turnoTerminado: actual.turnoTerminado, 
           totalJugadores: actual.totalJugadores,
-          mensajeAlerta: '⚠️ ${event.datos['usuario']} abandonó la partida.'
+          tablerosRivales: actual.tablerosRivales,
+          puntuacionesRivales: actual.puntuacionesRivales,
+          mensajeAlerta: 'Aviso: ${event.datos['usuario']} abandonó la partida.'
         ));
       }
     }
     // 6. VICTORIA POR ABANDONO
     else if (tipo == 'victoria_por_abandono') {
-      int puntos = (state is JuegoEnProgreso)
-          ? (state as JuegoEnProgreso).puntuacion
-          : 0;
-      // PRIMERO emitimos la victoria para que la pantalla del trofeo se pinte segura
+      int puntos = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
       emit(
         JuegoTerminado(
           state.tablero,
@@ -167,18 +180,20 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           esVictoria: true,
         ),
       );
-      // DESPUÉS desconectamos la red con calma, ya con el trofeo a salvo en pantalla
       servicioRed?.desconectar();
     }
     // 7. FIN DE PARTIDA GLOBAL (ONLINE)
     else if (tipo == 'fin_de_partida') {
       servicioRed?.desconectar();
-      bool ganaste = event.datos['ganador'] == servicioRed?.usuarioActual;
+      List ranking = event.datos['ranking'];
+      bool ganaste = ranking.isNotEmpty && ranking[0]['usuario'] == servicioRed?.usuarioActual;
+      
       emit(JuegoTerminado(
         state.tablero, 
-        mensaje: ganaste ? '¡Eres el ganador indiscutible!' : '${event.datos['ganador']} ha ganado la partida con ${event.datos['puntuacion']} puntos.', 
+        mensaje: ganaste ? '¡Eres el ganador indiscutible!' : '${ranking[0]['usuario']} ha ganado con ${ranking[0]['puntuacion']} puntos.', 
         puntuacionFinal: (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0, 
-        esVictoria: ganaste
+        esVictoria: ganaste,
+        rankingFinal: ranking,
       ));
     }
   }
@@ -273,7 +288,10 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
       final actual = state as JuegoEnProgreso;
       
       if (servicioRed != null) {
-        if (!actual.turnoTerminado) servicioRed!.terminarTurno();
+        if (!actual.turnoTerminado) {
+          // Exportamos el tablero y la puntuación
+          servicioRed!.terminarTurno(actual.tablero.exportarTableroSimple(), actual.puntuacion);
+        }
         
         emit(JuegoEnProgreso(
           actual.tablero,
@@ -287,6 +305,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
           numeroAColocar: null,      
           turnoTerminado: true,
           totalJugadores: actual.totalJugadores,
+          tablerosRivales: actual.tablerosRivales,
+          puntuacionesRivales: actual.puntuacionesRivales,
           mensajeAlerta: 'Turno terminado. Esperando a los demás...'
         ));
       } else {
@@ -316,6 +336,8 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         estadoZonasGlobal: actual.estadoZonasGlobal,
         turnoTerminado: actual.turnoTerminado, 
         totalJugadores: actual.totalJugadores,
+        tablerosRivales: actual.tablerosRivales,
+        puntuacionesRivales: actual.puntuacionesRivales,
       ));
     }
   }
@@ -331,21 +353,30 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
         Set<String> nuevasZonas = Set.from(actual.zonasCompletadas);
         String? alertaPersonalizada;
 
+        // Comprobamos si la zona se acaba de llenar con esta jugada
         if (!nuevasZonas.contains(idZona) && actual.tablero.estaZonaLlena(idZona)) {
           nuevasZonas.add(idZona); 
 
           if (servicioRed != null) {
+            // Mandamos el aviso al servidor de que la llenamos
             servicioRed!.reclamarZona(idZona, actual.idTirada);
-            alertaPersonalizada = 'Validando zona $idZona con el servidor...';
+            
+            // Calculamos nuestra recompensa de forma local para dar el feedback instantáneo
+            int lugarLocal = (actual.estadoZonasGlobal[idZona] ?? 0) + 1;
+            int puntos = MotorReglas.obtenerPuntos(idZona, lugarLocal, mapaActual: actual.tablero.capa.tipoMapa);
+            nuevaPuntuacion += puntos;
+            alertaPersonalizada = 'Has llenado la zona $idZona. +$puntos puntos obtenidos.';
           } else {
+            // Un jugador
             int puntos = MotorReglas.obtenerPuntos(idZona, 1, mapaActual: actual.tablero.capa.tipoMapa);
             nuevaPuntuacion += puntos;
-            alertaPersonalizada = '¡Zona $idZona completada! +$puntos puntos 🏆';
+            alertaPersonalizada = 'Has llenado la zona $idZona. +$puntos puntos obtenidos.';
           }
         }
 
         if (servicioRed != null) {
-          servicioRed!.terminarTurno(); 
+          // Exportamos el tablero y cerramos el turno
+          servicioRed!.terminarTurno(actual.tablero.exportarTableroSimple(), nuevaPuntuacion); 
 
           emit(JuegoEnProgreso(
             actual.tablero,
@@ -359,7 +390,9 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
             estadoZonasGlobal: actual.estadoZonasGlobal,
             turnoTerminado: true,
             totalJugadores: actual.totalJugadores,
-            mensajeAlerta: alertaPersonalizada ?? 'Jugada lista. Esperando a los demás...'
+            tablerosRivales: actual.tablerosRivales,
+            puntuacionesRivales: actual.puntuacionesRivales,
+            mensajeAlerta: alertaPersonalizada ?? 'Jugada registrada. Esperando a los demás jugadores.'
           ));
         } else {
           // UN JUGADOR (OFFLINE)

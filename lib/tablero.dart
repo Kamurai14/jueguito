@@ -230,4 +230,14 @@ class Tablero {
 
     return null; // Todo en orden, movimiento permitido
   }
+
+  List<int?> exportarTableroSimple() {
+    List<int?> export = [];
+    for (int fila = 0; fila < tamano; fila++) {
+      for (int col = 0; col < tamano; col++) {
+        export.add(_cuadricula[fila][col].valor);
+      }
+    }
+    return export;
+  }
 }
