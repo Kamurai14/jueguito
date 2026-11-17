@@ -6,10 +6,10 @@ import 'package:jueguito/auth_state.dart';
 import 'package:jueguito/servicios/servicio_auth.dart';
 import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/ui/pantalla_lobby.dart';
+import 'package:jueguito/ui/pantalla_reglas.dart';
 
 class PantallaMenuPrincipal extends StatelessWidget {
   const PantallaMenuPrincipal({super.key});
-
 
   void _cerrarSesion(BuildContext context) {
     context.read<AuthBloc>().add(CerrarSesionEvent());
@@ -128,8 +128,7 @@ class PantallaMenuPrincipal extends StatelessWidget {
                 icono: Icons.menu_book,
                 color: Colors.green,
                 onTap: () {
-                  // TODO: Aquí conectaremos tu pantalla de reglas en el futuro
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pantalla de reglas en construcción...')));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PantallaReglas()));
                 },
               ),
             ],
