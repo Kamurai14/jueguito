@@ -164,6 +164,79 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     );
   }
 
+  void _mostrarZoomTablero(
+    BuildContext context,
+    String nombreRival,
+    List<dynamic> tableroRival,
+    int puntosRival,
+    CapaZonas capa,
+  ) {
+    final double anchoDisponible = MediaQuery.of(context).size.width * 0.75;
+    final double tamanoCasilla = (anchoDisponible / 7).clamp(24.0, 42.0);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.blueGrey[900],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Colors.white24, width: 1.5),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nombreRival,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '$puntosRival pts',
+                          style: const TextStyle(
+                            color: Colors.amber,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              MiniTablero(
+                valores: tableroRival,
+                capa: capa,
+                tamanoCasilla: tamanoCasilla,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Toca afuera para cerrar',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
   // ==========================================
   // PANEL SUPERIOR: MAPAS DE LOS RIVALES
   // ==========================================
@@ -171,7 +244,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     if (estado.tablerosRivales.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 115, 
+      height: 115,
       margin: const EdgeInsets.only(bottom: 8.0),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -184,25 +257,45 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
 
           return Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                MiniTablero(
-                  valores: tableroRival, 
-                  capa: estado.tablero.capa, 
-                  tamanoCasilla: 9.0 // Cuadrito chiquito
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => _mostrarZoomTablero(
+                  context,
+                  rival,
+                  tableroRival,
+                  puntosRival,
+                  estado.tablero.capa,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  rival, 
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    MiniTablero(
+                      valores: tableroRival,
+                      capa: estado.tablero.capa,
+                      tamanoCasilla: 9.0,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      rival,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '$puntosRival pts',
+                      style: const TextStyle(
+                        color: Colors.amber,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  '$puntosRival pts', 
-                  style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold)
-                ),
-              ],
+              ),
             ),
           );
         },
