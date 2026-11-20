@@ -34,6 +34,7 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     on<ColocarJugada>(_onColocarJugada);
     on<PasarTurno>(_onPasarTurno);
     on<RecibirMensajeServidor>(_onRecibirMensajeServidor);
+    on<ColocarInicialesAleatorios>(_onColocarInicialesAleatorios);
   }
 
   @override
@@ -244,6 +245,67 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     } else {
       emit(JuegoEsperandoIniciales(state.tablero, numerosColocados: colocados));
     }
+  }
+
+  void _onColocarInicialesAleatorios(
+    ColocarInicialesAleatorios event,
+    Emitter<JuegoState> emit,
+  ) {
+    if (state is! JuegoEsperandoIniciales) return;
+
+    final tablero = state.tablero;
+    final List<List<int>> coordsIniciales = [];
+
+    // 1. Buscamos las 6 casillas iniciales y limpiamos cualquier número previo
+    for (int y = 0; y < 7; y++) {
+      for (int x = 0; x < 7; x++) {
+        final casilla = tablero.obtenerCasilla(x, y);
+        if (casilla.esInicial) {
+          casilla.valor = null;
+          coordsIniciales.add([x, y]);
+        }
+      }
+    }
+
+    // 2. Barajamos los números del 1 al 6
+    final List<int> numeros = [1, 2, 3, 4, 5, 6]..shuffle(_random);
+
+    // 3. Asignamos respetando validarColocacionInicial (incluyendo zonas naranjas del Mapa 4)
+    final exito = _asignarInicialesValidos(tablero, coordsIniciales, 0, numeros);
+
+    if (exito) {
+      _actualizarEstadoInicial(emit);
+    }
+  }
+
+  bool _asignarInicialesValidos(
+    Tablero tablero,
+    List<List<int>> coords,
+    int indice,
+    List<int> disponibles,
+  ) {
+    if (indice == coords.length) return true;
+
+    final int x = coords[indice][0];
+    final int y = coords[indice][1];
+
+    for (int i = 0; i < disponibles.length; i++) {
+      final int numCandidato = disponibles[i];
+
+      if (tablero.validarColocacionInicial(x, y, numCandidato) == null) {
+        tablero.obtenerCasilla(x, y).valor = numCandidato;
+
+        final List<int> restantes = List<int>.from(disponibles)..removeAt(i);
+        if (_asignarInicialesValidos(tablero, coords, indice + 1, restantes)) {
+          return true;
+        }
+
+        // Si ese camino no lleva a una solución completa, deshacemos y probamos otro
+        tablero.obtenerCasilla(x, y).valor = null;
+      }
+    }
+
+    return false;
   }
 
   // ==========================================================

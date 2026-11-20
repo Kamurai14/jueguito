@@ -15,25 +15,43 @@ class PanelControles extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state is JuegoEnProgreso) {
-      // Casteo local para acceder a dado1, dado2 y anclaSeleccionada sin errores
       final estadoJuego = state as JuegoEnProgreso;
 
+      String textoInstruccion;
+      Color colorTexto;
+
+      if (estadoJuego.mensajeAlerta != null) {
+        textoInstruccion = estadoJuego.mensajeAlerta!;
+        colorTexto = Colors.amberAccent;
+      } else if (estadoJuego.turnoTerminado) {
+        textoInstruccion = 'Jugada lista. Esperando a los demás...';
+        colorTexto = Colors.white70;
+      } else if (estadoJuego.anclaSeleccionada == null) {
+        textoInstruccion = 'Paso 1: Toca un dado para elegirlo como tu ancla';
+        colorTexto = Colors.white;
+      } else {
+        final numeroAColocar = estadoJuego.anclaSeleccionada == estadoJuego.dado1
+            ? estadoJuego.dado2
+            : estadoJuego.dado1;
+        textoInstruccion =
+            'Paso 2: Coloca el $numeroAColocar junto a un ${estadoJuego.anclaSeleccionada}';
+        colorTexto = Colors.lightGreenAccent;
+      }
+
       return Container(
-        height: 120, 
+        height: 120,
         alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // AQUÍ INTEGRAMOS LOS MENSAJES DE ALERTA DINÁMICOS
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
-                estadoJuego.mensajeAlerta ?? 'Selecciona el Ancla:',
+                textoInstruccion,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  // Si es una alerta se pone ámbar, si no, se queda blanco
-                  color: estadoJuego.mensajeAlerta != null ? Colors.amberAccent : Colors.white,
+                  fontSize: 15,
+                  color: colorTexto,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -47,8 +65,11 @@ class PanelControles extends StatelessWidget {
                   valor: estadoJuego.dado1,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado1,
                   idTirada: estadoJuego.idTirada,
-                  // Si el turno terminó, desactivamos el tap
-                  onTap: estadoJuego.turnoTerminado ? () {} : () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2)),
+                  onTap: estadoJuego.turnoTerminado
+                      ? () {}
+                      : () => context.read<JuegoBloc>().add(
+                            SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2),
+                          ),
                 ),
                 const SizedBox(width: 20),
                 _DadoBoton(
@@ -56,64 +77,110 @@ class PanelControles extends StatelessWidget {
                   valor: estadoJuego.dado2,
                   esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado2,
                   idTirada: estadoJuego.idTirada,
-                  // Si el turno terminó, desactivamos el tap
-                  onTap: estadoJuego.turnoTerminado ? () {} : () => context.read<JuegoBloc>().add(SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1)),
+                  onTap: estadoJuego.turnoTerminado
+                      ? () {}
+                      : () => context.read<JuegoBloc>().add(
+                            SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1),
+                          ),
                 ),
                 const SizedBox(width: 30),
                 TextButton(
                   key: const Key('boton_pasar_turno'),
-                  // Botón deshabilitado si ya jugó
-                  onPressed: estadoJuego.turnoTerminado ? null : () => context.read<JuegoBloc>().add(PasarTurno()),
-                  child: Text('Pasar Turno', style: TextStyle(color: estadoJuego.turnoTerminado ? Colors.grey : Colors.red)),
-                )
+                  onPressed: estadoJuego.turnoTerminado
+                      ? null
+                      : () => context.read<JuegoBloc>().add(PasarTurno()),
+                  child: Text(
+                    'Pasar Turno',
+                    style: TextStyle(
+                      color: estadoJuego.turnoTerminado ? Colors.grey : Colors.red,
+                    ),
+                  ),
+                ),
               ],
             ),
           ],
         ),
       );
-    } else {
-      if (state is JuegoActivo) {
-        final estado = state as JuegoActivo;
-        final bloc = context.read<JuegoBloc>();
-        final esMultiplayer = bloc.servicioRed != null;
-        final esAnfitrion = bloc.esAnfitrion;
+    } else if (state is JuegoActivo) {
+      final estado = state as JuegoActivo;
+      final bloc = context.read<JuegoBloc>();
+      final esMultiplayer = bloc.servicioRed != null;
+      final esAnfitrion = bloc.esAnfitrion;
 
-        String textoBoton = 'INICIAR';
-        bool habilitado = true;
+      String textoBoton = 'INICIAR';
+      bool habilitado = true;
 
-        if (esMultiplayer) {
-          if (esAnfitrion) {
-             textoBoton = 'INICIAR PARTIDA (${estado.listos}/${estado.total})';
-             habilitado = (estado.listos == estado.total && estado.total > 0);
-          } else {
-             textoBoton = 'ESPERANDO JUGADORES (${estado.listos}/${estado.total})...';
-             habilitado = false;
-          }
+      if (esMultiplayer) {
+        if (esAnfitrion) {
+          textoBoton = 'INICIAR PARTIDA (${estado.listos}/${estado.total})';
+          habilitado = (estado.listos == estado.total && estado.total > 0);
+        } else {
+          textoBoton = 'ESPERANDO JUGADORES (${estado.listos}/${estado.total})...';
+          habilitado = false;
         }
-
-        return ElevatedButton(
-            key: const Key('boton_iniciar_partida'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: habilitado ? Colors.green : Colors.blueGrey[600],
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            ),
-            onPressed: habilitado ? () => context.read<JuegoBloc>().add(ComenzarPartida()) : null,
-            child: Text(textoBoton, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: habilitado ? Colors.white : Colors.white70)),
-        );
       }
-      return const SizedBox.shrink();
+
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: ElevatedButton(
+          key: const Key('boton_iniciar_partida'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: habilitado ? Colors.green : Colors.blueGrey[600],
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+          ),
+          onPressed: habilitado
+              ? () => context.read<JuegoBloc>().add(ComenzarPartida())
+              : null,
+          child: Text(
+            textoBoton,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: habilitado ? Colors.white : Colors.white70,
+            ),
+          ),
+        ),
+      );
+    } else if (state is JuegoEsperandoIniciales) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: ElevatedButton.icon(
+          key: const Key('boton_iniciales_aleatorios'),
+          icon: const Icon(Icons.shuffle),
+          label: const Text(
+            'Colocar al azar',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: () {
+            context.read<JuegoBloc>().add(ColocarInicialesAleatorios());
+          },
+        ),
+      );
     }
+
+    return const SizedBox.shrink();
   }
 }
 
-// Convertimos el botón en un StatefulWidget para manejar su propia animación
 class _DadoBoton extends StatefulWidget {
   final int valor;
   final bool esAncla;
   final int idTirada;
   final VoidCallback onTap;
 
-  const _DadoBoton({super.key, required this.valor, required this.esAncla, required this.idTirada, required this.onTap});
+  const _DadoBoton({
+    super.key,
+    required this.valor,
+    required this.esAncla,
+    required this.idTirada,
+    required this.onTap,
+  });
 
   @override
   State<_DadoBoton> createState() => _DadoBotonState();
@@ -121,16 +188,14 @@ class _DadoBoton extends StatefulWidget {
 
 class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMixin {
   late AnimationController _animController;
-  AudioPlayer? _audioPlayer; 
+  AudioPlayer? _audioPlayer;
 
-  // Variable para detectar los test sin romper la versión Web
-  bool esTest = false; 
+  bool esTest = false;
 
   @override
   void initState() {
     super.initState();
-    
-    // Protegemos la verificación: Si estamos en Web, ignoramos el Platform.environment
+
     try {
       esTest = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
     } catch (e) {
@@ -160,8 +225,8 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   }
 
   void _reproducirSonido() async {
-    if (esTest || _audioPlayer == null) return; 
-    
+    if (esTest || _audioPlayer == null) return;
+
     try {
       await _audioPlayer!.play(AssetSource('sonidos/dados.mp3'));
     } catch (e) {
@@ -172,7 +237,7 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   @override
   void dispose() {
     _animController.dispose();
-    _audioPlayer?.dispose(); 
+    _audioPlayer?.dispose();
     super.dispose();
   }
 
@@ -184,10 +249,12 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
         animation: _animController,
         builder: (context, child) {
           double angulo = _animController.value * 2 * pi * 2;
-          
+
           return Transform(
             alignment: Alignment.center,
-            transform: Matrix4.identity()..rotateZ(angulo)..rotateX(angulo / 2),
+            transform: Matrix4.identity()
+              ..rotateZ(angulo)
+              ..rotateX(angulo / 2),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               width: 50,
@@ -195,17 +262,26 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
               decoration: BoxDecoration(
                 color: widget.esAncla ? Colors.blue : Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: widget.esAncla ? Colors.blue[900]! : Colors.black45, width: 2),
-                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(2, 2))]
+                border: Border.all(
+                  color: widget.esAncla ? Colors.blue[900]! : Colors.black45,
+                  width: 2,
+                ),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 4,
+                    offset: Offset(2, 2),
+                  ),
+                ],
               ),
               child: Center(
                 child: Text(
-                  _animController.isAnimating ? '?' : widget.valor.toString(), 
+                  _animController.isAnimating ? '?' : widget.valor.toString(),
                   style: TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold, 
-                    color: widget.esAncla ? Colors.white : Colors.black87
-                  )
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: widget.esAncla ? Colors.white : Colors.black87,
+                  ),
                 ),
               ),
             ),

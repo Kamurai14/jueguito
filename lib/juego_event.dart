@@ -57,3 +57,5 @@ class RecibirMensajeServidor extends JuegoEvent {
   final Map<String, dynamic> datos;
   RecibirMensajeServidor(this.datos);
 }
+
+class ColocarInicialesAleatorios extends JuegoEvent {}
