@@ -29,6 +29,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
   List<String> _jugadores = [];
   bool _saliendoVoluntariamente = false;
   String _mapaSeleccionado = 'mapa1'; // <-- Guardamos qué mapa se va a jugar
+  bool _esSalaCompetitiva = false;
 
   @override
   void initState() {
@@ -75,7 +76,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
           case 'unido_exitosamente':
             _esAnfitrion = datos['tipo'] == 'sala_creada';
             _codigoGenerado = datos['codigo'];
-            _mapaSeleccionado = datos['mapa'] ?? 'mapa1'; // Guardamos el mapa de la sala
+            _mapaSeleccionado = datos['mapa'] ?? 'mapa1';
+            _esSalaCompetitiva = datos['esCompetitiva'] ?? widget.esCompetitivo;
             _jugadores = List<String>.from(datos['jugadores']);
             break;
             
@@ -163,8 +165,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                   title: Text('Mapa ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: const Text('Toca para crear la sala'),
                   onTap: () {
-                    Navigator.pop(context); 
-                    _servicio.crearSala(tipo.name); // Crea la sala con este mapa
+                    Navigator.pop(context);
+                    _servicio.crearSala(tipo.name, esCompetitiva: widget.esCompetitivo);
                   },
                 );
               },
@@ -192,8 +194,8 @@ class _PantallaLobbyState extends State<PantallaLobby> {
       child: Scaffold(
         backgroundColor: const Color(0xFF1E1E1E), // Fondo oscuro más gamer
         appBar: AppBar(
-          title: const Text('Multijugador'),
-          backgroundColor: const Color(0xFF000000),
+          title: Text(widget.esCompetitivo ? 'Modo Competitivo' : 'Multijugador'),
+          backgroundColor: widget.esCompetitivo ? Colors.amber[900] : const Color(0xFF000000),
           foregroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),

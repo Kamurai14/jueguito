@@ -1,4 +1,3 @@
-// lib/ui/pantalla_tablero.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jueguito/juego_bloc.dart';
@@ -13,7 +12,7 @@ import 'package:jueguito/ui/tema_juego.dart';
 import 'package:jueguito/ui/cabecera_juego.dart';
 import 'package:jueguito/ui/cuadricula_tablero.dart';
 import 'package:jueguito/ui/panel_controles.dart';
-import 'package:jueguito/ui/mini_tablero.dart'; 
+import 'package:jueguito/ui/mini_tablero.dart';
 
 class PantallaTablero extends StatefulWidget {
   const PantallaTablero({super.key});
@@ -22,7 +21,8 @@ class PantallaTablero extends StatefulWidget {
   State<PantallaTablero> createState() => _PantallaTableroState();
 }
 
-class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProviderStateMixin {
+class _PantallaTableroState extends State<PantallaTablero>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
 
   @override
@@ -47,8 +47,10 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.blueGrey[900],
-      isScrollControlled: true, 
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (context) {
         List<Widget> reglas = [];
 
@@ -56,9 +58,9 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
           int p1 = MotorReglas.obtenerPuntos(idZona, 1, mapaActual: mapa);
           int p2 = MotorReglas.obtenerPuntos(idZona, 2, mapaActual: mapa);
           int p3 = MotorReglas.obtenerPuntos(idZona, 3, mapaActual: mapa);
-          
-          if (p1 > 0) { 
-            Color color = TemaJuego.obtenerColorZona(idZona, 0); 
+
+          if (p1 > 0) {
+            Color color = TemaJuego.obtenerColorZona(idZona, 0);
             reglas.add(_buildReglaItem(simbolo, color, [p1, p2, p3], desc));
           }
         }
@@ -99,9 +101,24 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(width: 50, height: 5, decoration: BoxDecoration(color: Colors.white30, borderRadius: BorderRadius.circular(10))),
+                Container(
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.white30,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
                 const SizedBox(height: 20),
-                const Text('GUÍA DE PUNTUACIONES', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const Text(
+                  'GUÍA DE PUNTUACIONES',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
                 const SizedBox(height: 25),
                 Wrap(
                   spacing: 25,
@@ -118,7 +135,12 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
     );
   }
 
-  Widget _buildReglaItem(String simbolo, Color colorBase, List<int> puntos, String desc) {
+  Widget _buildReglaItem(
+    String simbolo,
+    Color colorBase,
+    List<int> puntos,
+    String desc,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -129,7 +151,9 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             color: colorBase,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white54, width: 2),
-            boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 3))]
+            boxShadow: const [
+              BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 3)),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
@@ -137,26 +161,40 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: (colorBase == Colors.white || colorBase == Colors.yellowAccent[400]) ? Colors.black87 : Colors.white,
+              color: (colorBase == Colors.white ||
+                      colorBase == Colors.yellowAccent[400])
+                  ? Colors.black87
+                  : Colors.white,
             ),
           ),
         ),
         const SizedBox(height: 6),
         Row(
           mainAxisSize: MainAxisSize.min,
-          children: puntos.map((p) => Container(
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            decoration: BoxDecoration(
-              color: colorBase.withValues(alpha: 0.3),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8), bottom: Radius.circular(4)), 
-              border: Border.all(color: colorBase, width: 1.5)
-            ),
-            child: Text(
-              p.toString(),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          )).toList(),
+          children: puntos
+              .map(
+                (p) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: colorBase.withValues(alpha: 0.3),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(8),
+                      bottom: Radius.circular(4),
+                    ),
+                    border: Border.all(color: colorBase, width: 1.5),
+                  ),
+                  child: Text(
+                    p.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
         ),
         const SizedBox(height: 6),
         Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 11)),
@@ -237,6 +275,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
       ),
     );
   }
+
   // ==========================================
   // PANEL SUPERIOR: MAPAS DE LOS RIVALES
   // ==========================================
@@ -306,24 +345,26 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false, 
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        
+
         final salir = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('¿Abandonar partida?'),
-            content: const Text('Si te sales ahora perderás la partida y se le dará la victoria a tus rivales.'),
+            content: const Text(
+              'Si te sales ahora perderás la partida y se le dará la victoria a tus rivales.',
+            ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false), 
-                child: const Text('Cancelar')
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
               ),
               TextButton(
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                onPressed: () => Navigator.pop(context, true), 
-                child: const Text('Sí, rendirme')
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Sí, rendirme'),
               ),
             ],
           ),
@@ -335,11 +376,11 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.blueGrey[900], 
+        backgroundColor: Colors.blueGrey[900],
         key: const Key('pantalla_tablero_scaffold'),
         appBar: AppBar(
-          backgroundColor: Colors.blueGrey[900], 
-          foregroundColor: Colors.white, 
+          backgroundColor: Colors.blueGrey[900],
+          foregroundColor: Colors.white,
           elevation: 0,
           title: const Text('Juego 7x7'),
           actions: [
@@ -354,13 +395,12 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                 );
               },
             ),
-            const SizedBox(width: 8), 
+            const SizedBox(width: 8),
           ],
         ),
         body: SafeArea(
           child: BlocBuilder<JuegoBloc, JuegoState>(
             builder: (context, state) {
-              
               if (state is JuegoTerminado) {
                 return _buildPantallaResultados(context, state);
               }
@@ -369,15 +409,16 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CabeceraJuego(state: state),
-                  // AQUÍ INSERTAMOS A LOS RIVALES
                   if (state is JuegoEnProgreso) _buildPanelRivales(context, state),
-                  
                   Expanded(
                     child: AspectRatio(
-                      aspectRatio: 1, 
+                      aspectRatio: 1,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: CuadriculaTablero(state: state, animController: _animController),
+                        child: CuadriculaTablero(
+                          state: state,
+                          animController: _animController,
+                        ),
                       ),
                     ),
                   ),
@@ -392,7 +433,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
   }
 
   // ==========================================
-  // PANTALLA FINAL (PODIO CON MINIMAPAS)
+  // PANTALLA FINAL (PODIO CON MINIMAPAS Y RANGOS)
   // ==========================================
   Widget _buildPantallaResultados(BuildContext context, JuegoTerminado estado) {
     return Padding(
@@ -416,7 +457,7 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
             style: const TextStyle(fontSize: 18, color: Colors.white70),
           ),
           const SizedBox(height: 20),
-          
+
           // PODIO MULTIJUGADOR
           if (estado.rankingFinal != null && estado.rankingFinal!.isNotEmpty)
             Expanded(
@@ -425,13 +466,18 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                 itemBuilder: (context, index) {
                   final jugador = estado.rankingFinal![index];
                   bool esPrimero = index == 0;
-                  
+
                   return Card(
-                    color: esPrimero ? Colors.amber.withValues(alpha: 0.2) : Colors.blueGrey[800],
+                    color: esPrimero
+                        ? Colors.amber.withValues(alpha: 0.2)
+                        : Colors.blueGrey[800],
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
-                      side: BorderSide(color: esPrimero ? Colors.amber : Colors.transparent, width: 2)
+                      side: BorderSide(
+                        color: esPrimero ? Colors.amber : Colors.transparent,
+                        width: 2,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
@@ -439,25 +485,102 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
                         children: [
                           Text(
                             '#${index + 1}',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: esPrimero ? Colors.amber : Colors.white54),
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: esPrimero ? Colors.amber : Colors.white54,
+                            ),
                           ),
                           const SizedBox(width: 16),
                           MiniTablero(
                             valores: jugador['tablero'] ?? [],
                             capa: estado.tablero.capa,
-                            tamanoCasilla: 9.0, // Mapa en el podio
+                            tamanoCasilla: 9.0,
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(jugador['usuario'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                                Text('${jugador['puntuacion']} pts', style: const TextStyle(fontSize: 16, color: Colors.amber)),
+                                Text(
+                                  jugador['usuario'],
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                Text(
+                                  '${jugador['puntuacion']} pts',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                                if (jugador['rango'] != null) ...[
+                                  const SizedBox(height: 4),
+                                  Builder(
+                                    builder: (context) {
+                                      final rango = jugador['rango'] as Map;
+                                      final int cambio = rango['cambioPuntos'] ?? 0;
+                                      final String textoCambio =
+                                          cambio >= 0 ? '+$cambio pts' : '$cambio pts';
+                                      final bool subio = rango['subioDeNivel'] == true;
+
+                                      return Wrap(
+                                        spacing: 6,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Text(
+                                            '${rango['nombreNivel']} (${rango['puntos']} pts)',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.white70,
+                                            ),
+                                          ),
+                                          Text(
+                                            textoCambio,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.bold,
+                                              color: cambio >= 0
+                                                  ? Colors.greenAccent
+                                                  : Colors.redAccent,
+                                            ),
+                                          ),
+                                          if (subio)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.amber,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text(
+                                                '¡ASCENSO!',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
                               ],
                             ),
                           ),
-                          if (esPrimero) const Icon(Icons.emoji_events, color: Colors.amber, size: 40),
+                          if (esPrimero)
+                            const Icon(
+                              Icons.emoji_events,
+                              color: Colors.amber,
+                              size: 40,
+                            ),
                         ],
                       ),
                     ),
@@ -466,47 +589,108 @@ class _PantallaTableroState extends State<PantallaTablero> with SingleTickerProv
               ),
             )
           else ...[
-            // MODO UN JUGADOR (OFFLINE)
+            // MODO UN JUGADOR (OFFLINE) O VICTORIA POR ABANDONO
             Expanded(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    estado.esVictoria ? Icons.emoji_events : Icons.sentiment_dissatisfied,
+                    estado.esVictoria
+                        ? Icons.emoji_events
+                        : Icons.sentiment_dissatisfied,
                     size: 100,
                     color: estado.esVictoria ? Colors.amber : Colors.grey,
                   ),
                   const SizedBox(height: 20),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 15,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.blue[900],
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       'Puntuación Final: ${estado.puntuacionFinal}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
+                  if (estado.cambioRangoPropio != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey[800],
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.amber, width: 1.5),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${estado.cambioRangoPropio!['nombreNivel']} (${estado.cambioRangoPropio!['puntos']} pts)',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '+${estado.cambioRangoPropio!['cambioPuntos']} pts competitivos',
+                            style: const TextStyle(
+                              color: Colors.greenAccent,
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (estado.cambioRangoPropio!['subioDeNivel'] == true)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 6.0),
+                              child: Text(
+                                '¡SUBISTE DE RANGO!',
+                                style: TextStyle(
+                                  color: Colors.amber,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            )
+            ),
           ],
-          
+
           const SizedBox(height: 20),
           ElevatedButton.icon(
             icon: const Icon(Icons.home),
-            label: const Text('Volver al Menú', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            label: const Text(
+              'Volver al Menú',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF6B00),
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 60),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
             ),
             onPressed: () {
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-          )
+          ),
         ],
       ),
     );

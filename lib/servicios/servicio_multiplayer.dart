@@ -66,8 +66,12 @@ class ServicioMultiplayer {
     }
   }
 
-  void crearSala(String mapa) {
-    _enviar({'accion': 'crear_sala', 'mapa': mapa});
+  void crearSala(String mapa, {bool esCompetitiva = false}) {
+    _enviar({
+      'accion': 'crear_sala',
+      'mapa': mapa,
+      'esCompetitiva': esCompetitiva,
+    });
   }
 
   void unirseSala(String codigo) {

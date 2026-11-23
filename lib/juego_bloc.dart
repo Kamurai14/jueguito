@@ -173,28 +173,43 @@ class JuegoBloc extends Bloc<JuegoEvent, JuegoState> {
     // 6. VICTORIA POR ABANDONO
     else if (tipo == 'victoria_por_abandono') {
       int puntos = (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0;
+      final bool esCompetitiva = event.datos['esCompetitiva'] == true;
+      Map? miRango;
+
+      if (esCompetitiva && event.datos['cambiosRango'] != null && servicioRed?.usuarioActual != null) {
+        final cambios = event.datos['cambiosRango'] as Map;
+        miRango = cambios[servicioRed!.usuarioActual] as Map?;
+      }
+
       emit(
         JuegoTerminado(
           state.tablero,
           mensaje: event.datos['mensaje'],
           puntuacionFinal: puntos,
           esVictoria: true,
+          esCompetitiva: esCompetitiva,
+          cambioRangoPropio: miRango,
         ),
       );
       servicioRed?.desconectar();
     }
     // 7. FIN DE PARTIDA GLOBAL (ONLINE)
     else if (tipo == 'fin_de_partida') {
+      final usuarioActual = servicioRed?.usuarioActual;
       servicioRed?.desconectar();
       List ranking = event.datos['ranking'];
-      bool ganaste = ranking.isNotEmpty && ranking[0]['usuario'] == servicioRed?.usuarioActual;
-      
+      bool ganaste = ranking.isNotEmpty && ranking[0]['usuario'] == usuarioActual;
+      bool esCompetitiva = event.datos['esCompetitiva'] == true;
+
       emit(JuegoTerminado(
-        state.tablero, 
-        mensaje: ganaste ? '¡Eres el ganador indiscutible!' : '${ranking[0]['usuario']} ha ganado con ${ranking[0]['puntuacion']} puntos.', 
-        puntuacionFinal: (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0, 
+        state.tablero,
+        mensaje: ganaste
+            ? '¡Eres el ganador indiscutible!'
+            : '${ranking[0]['usuario']} ha ganado con ${ranking[0]['puntuacion']} puntos.',
+        puntuacionFinal: (state is JuegoEnProgreso) ? (state as JuegoEnProgreso).puntuacion : 0,
         esVictoria: ganaste,
         rankingFinal: ranking,
+        esCompetitiva: esCompetitiva,
       ));
     }
   }

@@ -73,12 +73,17 @@ class JuegoTerminado extends JuegoState {
   final String mensaje;
   final int puntuacionFinal;
   final bool esVictoria;
-  final List<dynamic>? rankingFinal; // Nuevo campo
+  final List? rankingFinal;
+  final bool esCompetitiva;
+  final Map? cambioRangoPropio;
 
-  JuegoTerminado(super.tablero, {
-    required this.mensaje, 
-    required this.puntuacionFinal, 
+  JuegoTerminado(
+    super.tablero, {
+    required this.mensaje,
+    required this.puntuacionFinal,
     required this.esVictoria,
-    this.rankingFinal
+    this.rankingFinal,
+    this.esCompetitiva = false,
+    this.cambioRangoPropio,
   });
 }
