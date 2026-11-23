@@ -113,5 +113,28 @@ class ServicioAuth {
   Future<String?> obtenerUsuarioActual() async {
   return await _almacenamientoSeguro.read(key: 'usuario_actual');
 }
+
+Future obtenerPerfil() async {
+    try {
+      String? token = await _almacenamientoSeguro.read(key: 'jwt_token');
+      if (token == null) return null;
+
+      final url = Uri.parse('$_baseUrl/perfil');
+      final respuesta = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException('El servidor tardó demasiado en responder'),
+      );
+
+      if (respuesta.statusCode == 200) {
+        return jsonDecode(respuesta.body) as Map;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
   
 }

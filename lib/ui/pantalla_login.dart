@@ -18,6 +18,8 @@ class _PantallaLoginState extends State<PantallaLogin> {
   final _controladorConfirmarPassword = TextEditingController();
   bool _estaRegistrando = false;
   bool _cargando = false;
+  bool _ocultarPassword = true;
+  bool _ocultarConfirmarPassword = true;
 
   @override
   void dispose() {
@@ -45,7 +47,6 @@ class _PantallaLoginState extends State<PantallaLogin> {
       }
     }
 
-    // EL FIX: Capturamos el Bloc y el ScaffoldMessenger ANTES de que el código se duerma
     final authBloc = context.read<AuthBloc>();
     final mensajero = ScaffoldMessenger.of(context);
 
@@ -55,36 +56,39 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
     if (_estaRegistrando) {
       resultado = await servicio.registrar(usuario, password);
-      
+
       if (resultado['exito'] == true) {
         final resultadoLogin = await servicio.login(usuario, password);
-        
+
         if (resultadoLogin['exito'] == true) {
           mensajero.showSnackBar(
-            const SnackBar(content: Text('¡Cuenta creada! Entrando a Brilliant...'), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text('Cuenta creada. Entrando a Brilliant...'),
+              backgroundColor: Colors.green,
+            ),
           );
-          // Le avisamos al BLoC y él se encarga de cambiar la pantalla automáticamente
           authBloc.add(IniciarSesionEvent(usuario));
-          return; 
+          return;
         } else {
-          resultado = resultadoLogin; // Si el auto-login falla, guardamos el error
+          resultado = resultadoLogin;
         }
       }
     } else {
-      // Flujo de login normal
       resultado = await servicio.login(usuario, password);
-      
+
       if (resultado['exito'] == true) {
         authBloc.add(IniciarSesionEvent(usuario));
-        return; 
+        return;
       }
     }
 
-    // Si hubo error, quitamos el cargando y mostramos la alerta
     if (mounted) {
       setState(() => _cargando = false);
       mensajero.showSnackBar(
-        SnackBar(content: Text(resultado['mensaje'] ?? 'Error desconocido'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text(resultado['mensaje'] ?? 'Error desconocido'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -100,7 +104,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F5EE), // Crema Brilliant
+      backgroundColor: const Color(0xFFF8F5EE),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -110,30 +114,48 @@ class _PantallaLoginState extends State<PantallaLogin> {
               const Text(
                 'BRILLIANT',
                 style: TextStyle(
-                  fontSize: 40, 
-                  fontWeight: FontWeight.w900, 
-                  color: Color(0xFFFF6B00) // Naranja
+                  fontSize: 40,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFFF6B00),
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               TextField(
                 controller: _controladorUsuario,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Usuario',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+                  hintText: _estaRegistrando
+                      ? 'Sin espacios, mín. 4 caracteres (ej. ivan_24)'
+                      : 'Ingresa tu usuario',
+                  hintStyle: const TextStyle(color: Colors.black45, fontSize: 13),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               TextField(
                 controller: _controladorPassword,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: _ocultarPassword,
+                decoration: InputDecoration(
                   labelText: 'Contraseña',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                  hintText: _estaRegistrando
+                      ? 'Mín. 6 caracteres, sin espacios (ej. clave123)'
+                      : 'Ingresa tu contraseña',
+                  hintStyle: const TextStyle(color: Colors.black45, fontSize: 13),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _ocultarPassword ? Icons.visibility : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _ocultarPassword = !_ocultarPassword;
+                      });
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -145,51 +167,71 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   physics: const NeverScrollableScrollPhysics(),
                   child: TextField(
                     controller: _controladorConfirmarPassword,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _ocultarConfirmarPassword,
+                    decoration: InputDecoration(
                       labelText: 'Confirmar Contraseña',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.lock_outline),
+                      hintText: 'Repite tu contraseña',
+                      hintStyle: const TextStyle(color: Colors.black45, fontSize: 13),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _ocultarConfirmarPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _ocultarConfirmarPassword = !_ocultarConfirmarPassword;
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
-              _cargando 
-                ? const CircularProgressIndicator(color: Color(0xFFE30059))
-                : ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0055A4), // Azul profundo
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 50),
+
+              _cargando
+                  ? const CircularProgressIndicator(color: Color(0xFFE30059))
+                  : ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0055A4),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      onPressed: _procesarFormulario,
+                      child: Text(
+                        _estaRegistrando ? 'Crear Cuenta' : 'Entrar',
+                        style: const TextStyle(fontSize: 18),
+                      ),
                     ),
-                    onPressed: _procesarFormulario,
-                    child: Text(
-                      _estaRegistrando ? 'Crear Cuenta' : 'Entrar', 
-                      style: const TextStyle(fontSize: 18)
-                    ),
-                  ),
-                  
+
               TextButton(
                 onPressed: () {
                   setState(() {
                     _estaRegistrando = !_estaRegistrando;
                     _controladorConfirmarPassword.clear();
+                    _ocultarPassword = true;
+                    _ocultarConfirmarPassword = true;
                   });
                 },
                 child: Text(
-                  _estaRegistrando 
-                    ? '¿Ya tienes cuenta? Inicia sesión' 
-                    : '¿No tienes cuenta? Regístrate',
-                  style: const TextStyle(color: Color(0xFFE30059)), // Rosa Brilliant
+                  _estaRegistrando
+                      ? '¿Ya tienes cuenta? Inicia sesión'
+                      : '¿No tienes cuenta? Regístrate',
+                  style: const TextStyle(color: Color(0xFFE30059)),
                 ),
               ),
 
               TextButton(
-                onPressed: () => context.read<AuthBloc>().add(EntrarComoInvitado()),
-                child: const Text('Jugar como Invitado', style: TextStyle(color: Colors.grey, fontSize: 16)),
+                onPressed: () =>
+                    context.read<AuthBloc>().add(EntrarComoInvitado()),
+                child: const Text(
+                  'Jugar como Invitado',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
               ),
             ],
           ),

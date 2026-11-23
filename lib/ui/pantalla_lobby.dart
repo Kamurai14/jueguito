@@ -10,7 +10,8 @@ import 'package:jueguito/auth_bloc.dart';
 import 'package:jueguito/auth_state.dart';
 
 class PantallaLobby extends StatefulWidget {
-  const PantallaLobby({super.key});
+  final bool esCompetitivo;
+  const PantallaLobby({super.key, this.esCompetitivo = false});
 
   @override
   State<PantallaLobby> createState() => _PantallaLobbyState();
