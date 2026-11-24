@@ -4,8 +4,6 @@ import 'package:jueguito/capa_zonas.dart';
 import 'package:jueguito/tablero.dart';
 import 'package:jueguito/juego_bloc.dart';
 import 'package:jueguito/ui/pantalla_tablero.dart';
-
-// --- Imports de Autenticación y BLoC Global ---
 import 'package:jueguito/auth_bloc.dart';
 import 'package:jueguito/auth_event.dart';
 import 'package:jueguito/auth_state.dart';
@@ -13,11 +11,12 @@ import 'package:jueguito/servicios/servicio_auth.dart';
 
 class DatosMapa {
   final String titulo;
+  final String nivel;
   final String descripcion;
   final TipoMapa tipo;
   final String rutaImagen;
 
-  DatosMapa(this.titulo, this.descripcion, this.tipo, this.rutaImagen);
+  DatosMapa(this.titulo, this.nivel, this.descripcion, this.tipo, this.rutaImagen);
 }
 
 class PantallaSeleccionMapas extends StatefulWidget {
@@ -28,14 +27,39 @@ class PantallaSeleccionMapas extends StatefulWidget {
   State<PantallaSeleccionMapas> createState() => _PantallaSeleccionMapasState();
 }
 
-class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with SingleTickerProviderStateMixin {
+class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
 
   final List<DatosMapa> _mapas = [
-    DatosMapa('Mapa 1', 'Nivel 1', TipoMapa.mapa1, 'assets/mapas/mapa1.png'),
-    DatosMapa('Mapa 2', 'Nivel 2', TipoMapa.mapa2, 'assets/mapas/mapa2.png'),
-    DatosMapa('Mapa 3', 'Nivel 3', TipoMapa.mapa3, 'assets/mapas/mapa3.png'),
-    DatosMapa('Mapa 4', 'Nivel 4', TipoMapa.mapa4, 'assets/mapas/mapa4.png'),
+    DatosMapa(
+      'Mapa 1',
+      'Nivel 1',
+      'Tablero clásico equilibrado para dominar las reglas base.',
+      TipoMapa.mapa1,
+      'assets/mapas/mapa1.png',
+    ),
+    DatosMapa(
+      'Mapa 2',
+      'Nivel 2',
+      'Introduce zonas blancas con números iguales.',
+      TipoMapa.mapa2,
+      'assets/mapas/mapa2.png',
+    ),
+    DatosMapa(
+      'Mapa 3',
+      'Nivel 3',
+      'Zonas amplias y mayor recompensa en zonas blancas.',
+      TipoMapa.mapa3,
+      'assets/mapas/mapa3.png',
+    ),
+    DatosMapa(
+      'Mapa 4',
+      'Nivel 4',
+      'Zonas naranjas con rangos estrictos (1-3 y 4-6).',
+      TipoMapa.mapa4,
+      'assets/mapas/mapa4.png',
+    ),
   ];
 
   @override
@@ -43,7 +67,7 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
     );
     _animController.forward();
   }
@@ -66,7 +90,7 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     );
   }
 
- void _cerrarSesion() {
+  void _cerrarSesion() {
     context.read<AuthBloc>().add(CerrarSesionEvent());
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -75,24 +99,28 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
     final authBloc = context.read<AuthBloc>();
     final navegador = Navigator.of(context);
     final mensajero = ScaffoldMessenger.of(context);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('¿Borrar cuenta?'),
-        content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
+        backgroundColor: const Color(0xFF101C2C),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¿Borrar cuenta?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             onPressed: () async {
-              Navigator.pop(dialogContext); 
-              
+              Navigator.pop(dialogContext);
               await ServicioAuth().borrarCuenta();
-              
+
               authBloc.add(CerrarSesionEvent());
               navegador.popUntil((route) => route.isFirst);
               mensajero.showSnackBar(
@@ -109,27 +137,34 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900], 
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.blueGrey[900], 
-        foregroundColor: Colors.white, 
-        elevation: 0, 
-        // 1. TÍTULO INTELIGENTE SEGÚN EL ESTADO
-        title: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            if (state is AuthAutenticado) {
-              return Text('Hola, ${state.usuario}', style: const TextStyle(fontWeight: FontWeight.bold));
-            }
-            return const Text('Modo Invitado', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey));
-          },
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.map_rounded, color: Color(0xFF00A8E8), size: 22),
+            SizedBox(width: 8),
+            Text(
+              'Seleccionar Mapa',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
         centerTitle: true,
         actions: [
-          // 2. MENÚ DE OPCIONES INTELIGENTE
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               return PopupMenuButton<String>(
-                icon: const Icon(Icons.person, color: Colors.white),
+                icon: const Icon(Icons.account_circle, color: Colors.white, size: 28),
+                color: const Color(0xFF101C2C),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 onSelected: (value) {
                   if (value == 'cerrar_sesion') {
                     _cerrarSesion();
@@ -138,27 +173,27 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
                   }
                 },
                 itemBuilder: (BuildContext context) => [
-                  // Solo mostramos "Borrar Cuenta" si el usuario SÍ está autenticado (no invitado)
-                  if (state is AuthAutenticado) ...[
+                  if (state is AuthAutenticado)
                     const PopupMenuItem(
                       value: 'borrar_cuenta',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_forever, color: Colors.red),
+                          Icon(Icons.delete_forever, color: Colors.redAccent),
                           SizedBox(width: 8),
-                          Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
+                          Text('Borrar Cuenta', style: TextStyle(color: Colors.redAccent)),
                         ],
                       ),
                     ),
-                  ],
-                  // El botón de salir siempre se muestra, pero cambia de nombre si es invitado
                   PopupMenuItem(
                     value: 'cerrar_sesion',
                     child: Row(
                       children: [
-                        const Icon(Icons.logout, color: Colors.black54),
+                        const Icon(Icons.logout, color: Colors.white70),
                         const SizedBox(width: 8),
-                        Text(state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión'),
+                        Text(
+                          state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
@@ -166,82 +201,196 @@ class _PantallaSeleccionMapasState extends State<PantallaSeleccionMapas> with Si
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _mapas.length,
-        itemBuilder: (context, index) {
-          final mapa = _mapas[index];
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0.0, -0.4),
+            radius: 1.3,
+            colors: [
+              Color(0xFF0D253F),
+              Color(0xFF0A1526),
+              Color(0xFF060A12),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+                itemCount: _mapas.length,
+                itemBuilder: (context, index) {
+                  final mapa = _mapas[index];
 
-          final animacionEntrada = Tween<Offset>(begin: const Offset(-1.5, 0), end: Offset.zero).animate(
-            CurvedAnimation(
-              parent: _animController,
-              curve: Interval(
-                index * 0.2, 
-                1.0,
-                curve: Curves.easeOutCubic,
+                  final animacionEntrada = Tween<Offset>(
+                    begin: const Offset(-0.5, 0),
+                    end: Offset.zero,
+                  ).animate(
+                    CurvedAnimation(
+                      parent: _animController,
+                      curve: Interval(
+                        index * 0.15,
+                        1.0,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
+                  );
+
+                  return SlideTransition(
+                    position: animacionEntrada,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: _TarjetaMapa(
+                        mapa: mapa,
+                        onTap: () => _seleccionarMapa(context, mapa.tipo),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-          );
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-          return SlideTransition(
-            position: animacionEntrada,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: InkWell(
-                onTap: () => _seleccionarMapa(context, mapa.tipo),
-                borderRadius: BorderRadius.circular(16),
-                child: Ink(
-                  decoration: BoxDecoration(
-                    color: Colors.blueGrey[800], 
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(0, 4))],
+class _TarjetaMapa extends StatefulWidget {
+  final DatosMapa mapa;
+  final VoidCallback onTap;
+
+  const _TarjetaMapa({required this.mapa, required this.onTap});
+
+  @override
+  State<_TarjetaMapa> createState() => _TarjetaMapaState();
+}
+
+class _TarjetaMapaState extends State<_TarjetaMapa> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _hover ? 1.02 : 1.0,
+          duration: const Duration(milliseconds: 140),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: _hover ? 0.1 : 0.06),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: _hover
+                    ? const Color(0xFF00A8E8).withValues(alpha: 0.8)
+                    : Colors.white.withValues(alpha: 0.12),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: _hover
+                      ? const Color(0xFF00A8E8).withValues(alpha: 0.2)
+                      : Colors.black.withValues(alpha: 0.35),
+                  blurRadius: _hover ? 18 : 10,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
+                  child: Image.asset(
+                    widget.mapa.rutaImagen,
+                    width: 115,
+                    height: 115,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 115,
+                      height: 115,
+                      color: const Color(0xFF102A43),
+                      child: const Icon(Icons.map_rounded, size: 40, color: Colors.white38),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                        child: Image.asset(
-                          mapa.rutaImagen,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 120,
-                            height: 120,
-                            color: Colors.blueGrey[700], 
-                            child: const Icon(Icons.map, size: 40, color: Colors.white54),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
                             Text(
-                              mapa.titulo,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                              widget.mapa.titulo,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              mapa.descripcion,
-                              style: const TextStyle(fontSize: 14, color: Colors.white70), 
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00A8E8).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF00A8E8).withValues(alpha: 0.5),
+                                ),
+                              ),
+                              child: Text(
+                                widget.mapa.nivel.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF72EFDD),
+                                  letterSpacing: 1,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                      const Icon(Icons.chevron_right, color: Colors.white54, size: 32),
-                      const SizedBox(width: 12),
-                    ],
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.mapa.descripcion,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                            height: 1.3,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 12.0),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: _hover ? const Color(0xFF00A8E8) : Colors.white38,
+                    size: 20,
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-      ), 
+          ),
+        ),
+      ),
     );
   }
 }
