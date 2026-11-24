@@ -7,6 +7,7 @@ import 'package:jueguito/servicios/servicio_auth.dart';
 import 'package:jueguito/ui/pantalla_seleccion_mapas.dart';
 import 'package:jueguito/ui/pantalla_lobby.dart';
 import 'package:jueguito/ui/pantalla_reglas.dart';
+import 'package:jueguito/ui/fondo_animado_brilliant.dart';
 
 class PantallaMenuPrincipal extends StatefulWidget {
   const PantallaMenuPrincipal({super.key});
@@ -48,25 +49,32 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1836),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.amber.withValues(alpha: 0.4)),
+        ),
         title: const Row(
           children: [
             Icon(Icons.lock, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Modo Competitivo'),
+            Text('Modo Competitivo', style: TextStyle(color: Colors.white)),
           ],
         ),
         content: const Text(
           'Debes iniciar sesión con una cuenta registrada para jugar en Modo Competitivo y guardar tu rango.',
+          style: TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0055A4),
+              backgroundColor: const Color(0xFFFF6B00),
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             onPressed: () {
               Navigator.pop(dialogContext);
@@ -87,15 +95,20 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('¿Borrar cuenta?'),
-        content: const Text('Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?'),
+        backgroundColor: const Color(0xFF1C1836),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¿Borrar cuenta?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Esta acción es permanente y perderás todo tu progreso. ¿Estás seguro?',
+          style: TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
             onPressed: () async {
               Navigator.pop(dialogContext);
               await ServicioAuth().borrarCuenta();
@@ -116,27 +129,66 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
   Color _obtenerColorRango(int nivelIndex) {
     switch (nivelIndex) {
       case 0:
-        return const Color(0xFFCD7F32); // Bronce
+        return const Color(0xFFCD7F32);
       case 1:
-        return Colors.grey[300]!; // Plata
+        return Colors.grey[300]!;
       case 2:
-        return Colors.amber; // Oro
+        return Colors.amber;
       case 3:
-        return Colors.cyanAccent; // Platino
+        return Colors.cyanAccent;
       case 4:
-        return Colors.lightBlueAccent; // Diamante
+        return Colors.lightBlueAccent;
       case 5:
-        return Colors.purpleAccent; // Maestro
+        return Colors.purpleAccent;
       case 6:
       default:
-        return Colors.redAccent; // Gran Maestro
+        return Colors.redAccent;
     }
+  }
+
+  Widget _buildEncabezadoHub() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'MENÚ PRINCIPAL',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFFFFB703), Color(0xFFFF6B00), Color(0xFFE30059)],
+              ).createShader(bounds),
+              child: const Text(
+                'BRILLIANT',
+                style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const Icon(Icons.grid_view_rounded, color: Colors.white24, size: 42),
+      ],
+    );
   }
 
   Widget _buildTarjetaRango() {
     if (_cargandoPerfil) {
       return const Padding(
-        padding: EdgeInsets.only(bottom: 24.0),
+        padding: EdgeInsets.only(bottom: 20.0),
         child: SizedBox(
           height: 24,
           width: 24,
@@ -155,12 +207,19 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 28),
+      margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blueGrey[800],
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colorRango, width: 1.5),
+        color: const Color(0xFF1F1B3D).withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colorRango.withValues(alpha: 0.75), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: colorRango.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -169,16 +228,32 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.emoji_events, color: colorRango, size: 28),
-                  const SizedBox(width: 10),
-                  Text(
-                    nombreNivel.toUpperCase(),
-                    style: TextStyle(
-                      color: colorRango,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: colorRango.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Icon(Icons.emoji_events, color: colorRango, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'RANGO ACTUAL',
+                        style: TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5),
+                      ),
+                      Text(
+                        nombreNivel.toUpperCase(),
+                        style: TextStyle(
+                          color: colorRango,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -193,13 +268,13 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
             ],
           ),
           if (!esGranMaestro) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: (puntos / 100).clamp(0.0, 1.0),
                 minHeight: 8,
-                backgroundColor: Colors.black38,
+                backgroundColor: Colors.black45,
                 valueColor: AlwaysStoppedAnimation<Color>(colorRango),
               ),
             ),
@@ -212,24 +287,54 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.blueGrey[900],
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
         title: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthAutenticado) {
-              return Text('Hola, ${state.usuario}', style: const TextStyle(fontWeight: FontWeight.bold));
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified_user, size: 16, color: Color(0xFFFFB703)),
+                    const SizedBox(width: 6),
+                    Text(
+                      state.usuario,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              );
             }
-            return const Text('Modo Invitado', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey));
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Modo Invitado',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white60),
+              ),
+            );
           },
         ),
         actions: [
           BlocBuilder<AuthBloc, AuthState>(
             builder: (context, state) {
               return PopupMenuButton<String>(
-                icon: const Icon(Icons.person, color: Colors.white),
+                icon: const Icon(Icons.account_circle, color: Colors.white, size: 28),
+                color: const Color(0xFF1F1B3D),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 onSelected: (value) {
                   if (value == 'cerrar_sesion') {
                     _cerrarSesion(context);
@@ -243,9 +348,9 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
                       value: 'borrar_cuenta',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_forever, color: Colors.red),
+                          Icon(Icons.delete_forever, color: Colors.redAccent),
                           SizedBox(width: 8),
-                          Text('Borrar Cuenta', style: TextStyle(color: Colors.red)),
+                          Text('Borrar Cuenta', style: TextStyle(color: Colors.redAccent)),
                         ],
                       ),
                     ),
@@ -253,9 +358,12 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
                     value: 'cerrar_sesion',
                     child: Row(
                       children: [
-                        const Icon(Icons.logout, color: Colors.black54),
+                        const Icon(Icons.logout, color: Colors.white70),
                         const SizedBox(width: 8),
-                        Text(state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión'),
+                        Text(
+                          state is AuthInvitado ? 'Salir de Invitado' : 'Cerrar Sesión',
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
@@ -263,80 +371,109 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
-          child: BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, authState) {
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'BRILLIANT',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFFFF6B00),
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+      body: FondoAnimadoBrilliant(
+        // Paleta índigo/morado distinta al Login
+        coloresFondo: const [
+          Color(0xFF2B235A),
+          Color(0xFF161230),
+          Color(0xFF0A0818),
+        ],
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildEncabezadoHub(),
+                        const SizedBox(height: 20),
 
-                  if (authState is AuthAutenticado) _buildTarjetaRango(),
+                        if (authState is AuthAutenticado) _buildTarjetaRango(),
 
-                  _BotonMenu(
-                    titulo: 'Jugar Solo',
-                    icono: Icons.person,
-                    color: Colors.blue,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PantallaSeleccionMapas(modoMultijugador: false)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _BotonMenu(
-                    titulo: 'Multijugador',
-                    icono: Icons.wifi,
-                    color: const Color(0xFFE30059),
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PantallaLobby(esCompetitivo: false)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _BotonMenu(
-                    titulo: 'Modo Competitivo',
-                    icono: Icons.emoji_events,
-                    color: Colors.amber[800]!,
-                    onTap: () async {
-                      if (authState is AuthInvitado) {
-                        _mostrarAvisoInvitado(context);
-                        return;
-                      }
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PantallaLobby(esCompetitivo: true)),
-                      );
-                      _cargarPerfil(); // Actualiza los puntos al regresar de jugar
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  _BotonMenu(
-                    titulo: 'Reglas del Juego',
-                    icono: Icons.menu_book,
-                    color: Colors.green,
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const PantallaReglas()));
-                    },
-                  ),
-                ],
-              );
-            },
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.95,
+                          children: [
+                            _TarjetaModoJuego(
+                              titulo: 'Jugar Solo',
+                              subtitulo: 'Practica y supera tu récord',
+                              icono: Icons.person,
+                              colorInicio: const Color(0xFF0096C7),
+                              colorFin: const Color(0xFF0055A4),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PantallaSeleccionMapas(modoMultijugador: false),
+                                ),
+                              ),
+                            ),
+                            _TarjetaModoJuego(
+                              titulo: 'Multijugador',
+                              subtitulo: 'Salas casuales con amigos',
+                              icono: Icons.wifi,
+                              colorInicio: const Color(0xFFFF2A7A),
+                              colorFin: const Color(0xFFC2004B),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PantallaLobby(esCompetitivo: false),
+                                ),
+                              ),
+                            ),
+                            _TarjetaModoJuego(
+                              titulo: 'Competitivo',
+                              subtitulo: authState is AuthInvitado
+                                  ? 'Inicia sesión'
+                                  : 'Sube de rango',
+                              icono: authState is AuthInvitado ? Icons.lock : Icons.emoji_events,
+                              colorInicio: const Color(0xFFFFB703),
+                              colorFin: const Color(0xFFE07A00),
+                              onTap: () async {
+                                if (authState is AuthInvitado) {
+                                  _mostrarAvisoInvitado(context);
+                                  return;
+                                }
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PantallaLobby(esCompetitivo: true),
+                                  ),
+                                );
+                                _cargarPerfil();
+                              },
+                            ),
+                            _TarjetaModoJuego(
+                              titulo: 'Reglas',
+                              subtitulo: 'Zonas y puntos',
+                              icono: Icons.menu_book,
+                              colorInicio: const Color(0xFF4CAF50),
+                              colorFin: const Color(0xFF2E7D32),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const PantallaReglas()),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -344,37 +481,109 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
   }
 }
 
-class _BotonMenu extends StatelessWidget {
+class _TarjetaModoJuego extends StatefulWidget {
   final String titulo;
+  final String subtitulo;
   final IconData icono;
-  final Color color;
+  final Color colorInicio;
+  final Color colorFin;
   final VoidCallback onTap;
 
-  const _BotonMenu({
+  const _TarjetaModoJuego({
     required this.titulo,
+    required this.subtitulo,
     required this.icono,
-    required this.color,
+    required this.colorInicio,
+    required this.colorFin,
     required this.onTap,
   });
 
   @override
+  State<_TarjetaModoJuego> createState() => _TarjetaModoJuegoState();
+}
+
+class _TarjetaModoJuegoState extends State<_TarjetaModoJuego> {
+  bool _hover = false;
+  bool _presionado = false;
+
+  @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, 65),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 5,
-      ),
-      onPressed: onTap,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 28),
-          const SizedBox(width: 12),
-          Text(titulo, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        ],
+    final double escala = _presionado ? 0.95 : (_hover ? 1.03 : 1.0);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _presionado = true),
+        onTapUp: (_) {
+          setState(() => _presionado = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _presionado = false),
+        child: AnimatedScale(
+          scale: escala,
+          duration: const Duration(milliseconds: 120),
+          child: Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [widget.colorInicio, widget.colorFin],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: _hover ? 0.45 : 0.18),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.colorFin.withValues(alpha: _hover ? 0.55 : 0.35),
+                  blurRadius: _hover ? 20 : 12,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.22),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(widget.icono, size: 32, color: Colors.white),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.titulo,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.subtitulo,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

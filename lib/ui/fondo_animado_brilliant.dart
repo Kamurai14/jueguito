@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 
 class FondoAnimadoBrilliant extends StatefulWidget {
   final Widget child;
+  final List<Color>? coloresFondo;
 
-  const FondoAnimadoBrilliant({super.key, required this.child});
+  const FondoAnimadoBrilliant({
+    super.key,
+    required this.child,
+    this.coloresFondo,
+  });
 
   @override
   State<FondoAnimadoBrilliant> createState() => _FondoAnimadoBrilliantState();
@@ -59,15 +64,16 @@ class _FondoAnimadoBrilliantState extends State<FondoAnimadoBrilliant>
       children: [
         // Capa 1: Degradado de fondo con profundidad
         Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: Alignment(0.0, -0.3),
+              center: const Alignment(0.0, -0.3),
               radius: 1.2,
-              colors: [
-                Color(0xFF1E2D3D),
-                Color(0xFF101820),
-                Color(0xFF090D12),
-              ],
+              colors: widget.coloresFondo ??
+                  const [
+                    Color(0xFF1E2D3D),
+                    Color(0xFF101820),
+                    Color(0xFF090D12),
+                  ],
             ),
           ),
         ),
