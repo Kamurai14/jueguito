@@ -1,3 +1,4 @@
+// lib/ui/pantalla_tablero.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:jueguito/juego_bloc.dart';
@@ -46,7 +47,7 @@ class _PantallaTableroState extends State<PantallaTablero>
   void _mostrarMenuReglas(BuildContext context, TipoMapa mapa) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.blueGrey[900],
+      backgroundColor: const Color(0xFF141B24),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -97,7 +98,7 @@ class _PantallaTableroState extends State<PantallaTablero>
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -105,24 +106,24 @@ class _PantallaTableroState extends State<PantallaTablero>
                   width: 50,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: Colors.white30,
+                    color: Colors.white24,
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 const Text(
                   'GUÍA DE PUNTUACIONES',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 2,
                   ),
                 ),
-                const SizedBox(height: 25),
+                const SizedBox(height: 24),
                 Wrap(
-                  spacing: 25,
-                  runSpacing: 25,
+                  spacing: 24,
+                  runSpacing: 24,
                   alignment: WrapAlignment.center,
                   children: reglas,
                 ),
@@ -145,14 +146,18 @@ class _PantallaTableroState extends State<PantallaTablero>
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 55,
-          height: 55,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             color: colorBase,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.white54, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 3)),
+            boxShadow: [
+              BoxShadow(
+                color: colorBase.withValues(alpha: 0.35),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
             ],
           ),
           alignment: Alignment.center,
@@ -160,7 +165,7 @@ class _PantallaTableroState extends State<PantallaTablero>
             simbolo,
             style: TextStyle(
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
               color: (colorBase == Colors.white ||
                       colorBase == Colors.yellowAccent[400])
                   ? Colors.black87
@@ -168,21 +173,18 @@ class _PantallaTableroState extends State<PantallaTablero>
             ),
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: puntos
               .map(
                 (p) => Container(
                   margin: const EdgeInsets.symmetric(horizontal: 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                   decoration: BoxDecoration(
-                    color: colorBase.withValues(alpha: 0.3),
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8),
-                      bottom: Radius.circular(4),
-                    ),
-                    border: Border.all(color: colorBase, width: 1.5),
+                    color: colorBase.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: colorBase, width: 1.3),
                   ),
                   child: Text(
                     p.toString(),
@@ -197,7 +199,7 @@ class _PantallaTableroState extends State<PantallaTablero>
               .toList(),
         ),
         const SizedBox(height: 6),
-        Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        Text(desc, style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
       ],
     );
   }
@@ -215,10 +217,10 @@ class _PantallaTableroState extends State<PantallaTablero>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.blueGrey[900],
+        backgroundColor: const Color(0xFF141B24),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Colors.white24, width: 1.5),
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.5),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20.0),
@@ -237,7 +239,7 @@ class _PantallaTableroState extends State<PantallaTablero>
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w900,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -259,10 +261,13 @@ class _PantallaTableroState extends State<PantallaTablero>
                 ],
               ),
               const SizedBox(height: 16),
-              MiniTablero(
-                valores: tableroRival,
-                capa: capa,
-                tamanoCasilla: tamanoCasilla,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: MiniTablero(
+                  valores: tableroRival,
+                  capa: capa,
+                  tamanoCasilla: tamanoCasilla,
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -283,7 +288,7 @@ class _PantallaTableroState extends State<PantallaTablero>
     if (estado.tablerosRivales.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 115,
+      height: 124,
       margin: const EdgeInsets.only(bottom: 8.0),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -295,7 +300,7 @@ class _PantallaTableroState extends State<PantallaTablero>
           int puntosRival = estado.puntuacionesRivales[rival] ?? 0;
 
           return Padding(
-            padding: const EdgeInsets.only(right: 16.0),
+            padding: const EdgeInsets.only(right: 12.0),
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -306,33 +311,41 @@ class _PantallaTableroState extends State<PantallaTablero>
                   puntosRival,
                   estado.tablero.capa,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    MiniTablero(
-                      valores: tableroRival,
-                      capa: estado.tablero.capa,
-                      tamanoCasilla: 9.0,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      rival,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      MiniTablero(
+                        valores: tableroRival,
+                        capa: estado.tablero.capa,
+                        tamanoCasilla: 8.5,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      '$puntosRival pts',
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(height: 5),
+                      Text(
+                        rival,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      Text(
+                        '$puntosRival pts',
+                        style: const TextStyle(
+                          color: Colors.amber,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -352,17 +365,26 @@ class _PantallaTableroState extends State<PantallaTablero>
         final salir = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('¿Abandonar partida?'),
+            backgroundColor: const Color(0xFF141B24),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: Colors.redAccent.withValues(alpha: 0.35)),
+            ),
+            title: const Text(
+              '¿Abandonar partida?',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
             content: const Text(
               'Si te sales ahora perderás la partida y se le dará la victoria a tus rivales.',
+              style: TextStyle(color: Colors.white70),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
+                child: const Text('Cancelar', style: TextStyle(color: Colors.white54)),
               ),
               TextButton(
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Sí, rendirme'),
               ),
@@ -376,18 +398,26 @@ class _PantallaTableroState extends State<PantallaTablero>
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.blueGrey[900],
+        extendBodyBehindAppBar: true,
         key: const Key('pantalla_tablero_scaffold'),
         appBar: AppBar(
-          backgroundColor: Colors.blueGrey[900],
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           elevation: 0,
-          title: const Text('Juego 7x7'),
+          centerTitle: true,
+          title: const Text(
+            'BRILLIANT',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.5,
+              fontSize: 20,
+            ),
+          ),
           actions: [
             BlocBuilder<JuegoBloc, JuegoState>(
               builder: (context, state) {
                 return IconButton(
-                  icon: const Icon(Icons.help_outline),
+                  icon: const Icon(Icons.help_outline_rounded),
                   tooltip: 'Ver reglas y puntos',
                   onPressed: () {
                     _mostrarMenuReglas(context, state.tablero.capa.tipoMapa);
@@ -398,34 +428,73 @@ class _PantallaTableroState extends State<PantallaTablero>
             const SizedBox(width: 8),
           ],
         ),
-        body: SafeArea(
-          child: BlocBuilder<JuegoBloc, JuegoState>(
-            builder: (context, state) {
-              if (state is JuegoTerminado) {
-                return _buildPantallaResultados(context, state);
-              }
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0.0, -0.2),
+              radius: 1.3,
+              colors: [
+                Color(0xFF1B2430),
+                Color(0xFF10151C),
+                Color(0xFF080B0F),
+              ],
+            ),
+          ),
+          child: SafeArea(
+            child: BlocBuilder<JuegoBloc, JuegoState>(
+              builder: (context, state) {
+                if (state is JuegoTerminado) {
+                  return _buildPantallaResultados(context, state);
+                }
 
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CabeceraJuego(state: state),
-                  if (state is JuegoEnProgreso) _buildPanelRivales(context, state),
-                  Expanded(
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: CuadriculaTablero(
-                          state: state,
-                          animController: _animController,
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: CabeceraJuego(state: state),
+                    ),
+                    if (state is JuegoEnProgreso) _buildPanelRivales(context, state),
+                    Expanded(
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 12.0,
+                              vertical: 6.0,
+                            ),
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.45),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: CuadriculaTablero(
+                              state: state,
+                              animController: _animController,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  PanelControles(state: state),
-                ],
-              );
-            },
+                    PanelControles(state: state),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -436,262 +505,299 @@ class _PantallaTableroState extends State<PantallaTablero>
   // PANTALLA FINAL (PODIO CON MINIMAPAS Y RANGOS)
   // ==========================================
   Widget _buildPantallaResultados(BuildContext context, JuegoTerminado estado) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          const SizedBox(height: 10),
-          Text(
-            estado.esVictoria ? '¡VICTORIA!' : 'FIN DEL JUEGO',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-              color: estado.esVictoria ? Colors.amber : Colors.white,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            estado.mensaje,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 18, color: Colors.white70),
-          ),
-          const SizedBox(height: 20),
-
-          // PODIO MULTIJUGADOR
-          if (estado.rankingFinal != null && estado.rankingFinal!.isNotEmpty)
-            Expanded(
-              child: ListView.builder(
-                itemCount: estado.rankingFinal!.length,
-                itemBuilder: (context, index) {
-                  final jugador = estado.rankingFinal![index];
-                  bool esPrimero = index == 0;
-
-                  return Card(
-                    color: esPrimero
-                        ? Colors.amber.withValues(alpha: 0.2)
-                        : Colors.blueGrey[800],
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      side: BorderSide(
-                        color: esPrimero ? Colors.amber : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Row(
-                        children: [
-                          Text(
-                            '#${index + 1}',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: esPrimero ? Colors.amber : Colors.white54,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          MiniTablero(
-                            valores: jugador['tablero'] ?? [],
-                            capa: estado.tablero.capa,
-                            tamanoCasilla: 9.0,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  jugador['usuario'],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                Text(
-                                  '${jugador['puntuacion']} pts',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.amber,
-                                  ),
-                                ),
-                                if (jugador['rango'] != null) ...[
-                                  const SizedBox(height: 4),
-                                  Builder(
-                                    builder: (context) {
-                                      final rango = jugador['rango'] as Map;
-                                      final int cambio = rango['cambioPuntos'] ?? 0;
-                                      final String textoCambio =
-                                          cambio >= 0 ? '+$cambio pts' : '$cambio pts';
-                                      final bool subio = rango['subioDeNivel'] == true;
-
-                                      return Wrap(
-                                        spacing: 6,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            '${rango['nombreNivel']} (${rango['puntos']} pts)',
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.white70,
-                                            ),
-                                          ),
-                                          Text(
-                                            textoCambio,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              color: cambio >= 0
-                                                  ? Colors.greenAccent
-                                                  : Colors.redAccent,
-                                            ),
-                                          ),
-                                          if (subio)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.amber,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: const Text(
-                                                '¡ASCENSO!',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.black,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (esPrimero)
-                            const Icon(
-                              Icons.emoji_events,
-                              color: Colors.amber,
-                              size: 40,
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: estado.esVictoria
+                      ? const [Color(0xFFFFD166), Color(0xFFFFB703), Color(0xFFFF6B00)]
+                      : const [Colors.white, Colors.white70],
+                ).createShader(bounds),
+                child: Text(
+                  estado.esVictoria ? '¡VICTORIA!' : 'FIN DEL JUEGO',
+                  style: const TextStyle(
+                    fontSize: 34,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                    letterSpacing: 2.5,
+                  ),
+                ),
               ),
-            )
-          else ...[
-            // MODO UN JUGADOR (OFFLINE) O VICTORIA POR ABANDONO
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    estado.esVictoria
-                        ? Icons.emoji_events
-                        : Icons.sentiment_dissatisfied,
-                    size: 100,
-                    color: estado.esVictoria ? Colors.amber : Colors.grey,
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 15,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[900],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'Puntuación Final: ${estado.puntuacionFinal}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  if (estado.cambioRangoPropio != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.blueGrey[800],
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.amber, width: 1.5),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            '${estado.cambioRangoPropio!['nombreNivel']} (${estado.cambioRangoPropio!['puntos']} pts)',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
+              const SizedBox(height: 8),
+              Text(
+                estado.mensaje,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 20),
+
+              // PODIO MULTIJUGADOR
+              if (estado.rankingFinal != null && estado.rankingFinal!.isNotEmpty)
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: estado.rankingFinal!.length,
+                    itemBuilder: (context, index) {
+                      final jugador = estado.rankingFinal![index];
+                      bool esPrimero = index == 0;
+
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 7),
+                        padding: const EdgeInsets.all(14.0),
+                        decoration: BoxDecoration(
+                          color: esPrimero
+                              ? Colors.amber.withValues(alpha: 0.14)
+                              : Colors.white.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: esPrimero
+                                ? Colors.amber.withValues(alpha: 0.8)
+                                : Colors.white.withValues(alpha: 0.1),
+                            width: esPrimero ? 2 : 1.2,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '+${estado.cambioRangoPropio!['cambioPuntos']} pts competitivos',
-                            style: const TextStyle(
-                              color: Colors.greenAccent,
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (estado.cambioRangoPropio!['subioDeNivel'] == true)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 6.0),
-                              child: Text(
-                                '¡SUBISTE DE RANGO!',
-                                style: TextStyle(
-                                  color: Colors.amber,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                ),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              '#${index + 1}',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w900,
+                                color: esPrimero ? Colors.amber : Colors.white54,
                               ),
                             ),
-                        ],
+                            const SizedBox(width: 14),
+                            MiniTablero(
+                              valores: jugador['tablero'] ?? [],
+                              capa: estado.tablero.capa,
+                              tamanoCasilla: 9.0,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    jugador['usuario'],
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${jugador['puntuacion']} pts',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber,
+                                    ),
+                                  ),
+                                  if (jugador['rango'] != null) ...[
+                                    const SizedBox(height: 4),
+                                    Builder(
+                                      builder: (context) {
+                                        final rango = jugador['rango'] as Map;
+                                        final int cambio = rango['cambioPuntos'] ?? 0;
+                                        final String textoCambio =
+                                            cambio >= 0 ? '+$cambio pts' : '$cambio pts';
+                                        final bool subio = rango['subioDeNivel'] == true;
+
+                                        return Wrap(
+                                          spacing: 6,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            Text(
+                                              '${rango['nombreNivel']} (${rango['puntos']} pts)',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.white70,
+                                              ),
+                                            ),
+                                            Text(
+                                              textoCambio,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: cambio >= 0
+                                                    ? Colors.greenAccent
+                                                    : Colors.redAccent,
+                                              ),
+                                            ),
+                                            if (subio)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: const Text(
+                                                  '¡ASCENSO!',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            if (esPrimero)
+                              const Icon(
+                                Icons.emoji_events_rounded,
+                                color: Colors.amber,
+                                size: 38,
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else ...[
+                // MODO UN JUGADOR (OFFLINE) O VICTORIA POR ABANDONO
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        estado.esVictoria
+                            ? Icons.emoji_events_rounded
+                            : Icons.sentiment_dissatisfied_rounded,
+                        size: 96,
+                        color: estado.esVictoria ? Colors.amber : Colors.white38,
                       ),
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 28,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
+                          ),
+                        ),
+                        child: Text(
+                          'Puntuación Final: ${estado.puntuacionFinal}',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      if (estado.cambioRangoPropio != null) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.amber, width: 1.5),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '${estado.cambioRangoPropio!['nombreNivel']} (${estado.cambioRangoPropio!['puntos']} pts)',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '+${estado.cambioRangoPropio!['cambioPuntos']} pts competitivos',
+                                style: const TextStyle(
+                                  color: Colors.greenAccent,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (estado.cambioRangoPropio!['subioDeNivel'] == true)
+                                const Padding(
+                                  padding: EdgeInsets.only(top: 6.0),
+                                  child: Text(
+                                    '¡SUBISTE DE RANGO!',
+                                    style: TextStyle(
+                                      color: Colors.amber,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF6B00), Color(0xFFE30059)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF6B00).withValues(alpha: 0.35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
                     ),
                   ],
-                ],
+                ),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.home_rounded),
+                  label: const Text(
+                    'VOLVER AL MENÚ',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                ),
               ),
-            ),
-          ],
-
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.home),
-            label: const Text(
-              'Volver al Menú',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF6B00),
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 60),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

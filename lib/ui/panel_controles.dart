@@ -19,86 +19,125 @@ class PanelControles extends StatelessWidget {
 
       String textoInstruccion;
       Color colorTexto;
+      Color colorBordeGuia;
 
       if (estadoJuego.mensajeAlerta != null) {
         textoInstruccion = estadoJuego.mensajeAlerta!;
         colorTexto = Colors.amberAccent;
+        colorBordeGuia = Colors.amberAccent;
       } else if (estadoJuego.turnoTerminado) {
         textoInstruccion = 'Jugada lista. Esperando a los demás...';
         colorTexto = Colors.white70;
+        colorBordeGuia = Colors.white24;
       } else if (estadoJuego.anclaSeleccionada == null) {
         textoInstruccion = 'Paso 1: Toca un dado para elegirlo como tu ancla';
         colorTexto = Colors.white;
+        colorBordeGuia = const Color(0xFF00A8E8);
       } else {
         final numeroAColocar = estadoJuego.anclaSeleccionada == estadoJuego.dado1
             ? estadoJuego.dado2
             : estadoJuego.dado1;
         textoInstruccion =
             'Paso 2: Coloca el $numeroAColocar junto a un ${estadoJuego.anclaSeleccionada}';
-        colorTexto = Colors.lightGreenAccent;
+        colorTexto = Colors.cyanAccent;
+        colorBordeGuia = Colors.cyanAccent;
       }
 
-      return Container(
-        height: 120,
-        alignment: Alignment.center,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(12, 4, 12, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF141B24).withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: colorBordeGuia.withValues(alpha: 0.35),
+              width: 1.4,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.45),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
                 textoInstruccion,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontSize: 13.5,
                   color: colorTexto,
                 ),
                 textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _DadoBoton(
-                  key: const ValueKey('dado1'),
-                  valor: estadoJuego.dado1,
-                  esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado1,
-                  idTirada: estadoJuego.idTirada,
-                  onTap: estadoJuego.turnoTerminado
-                      ? () {}
-                      : () => context.read<JuegoBloc>().add(
-                            SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2),
-                          ),
-                ),
-                const SizedBox(width: 20),
-                _DadoBoton(
-                  key: const ValueKey('dado2'),
-                  valor: estadoJuego.dado2,
-                  esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado2,
-                  idTirada: estadoJuego.idTirada,
-                  onTap: estadoJuego.turnoTerminado
-                      ? () {}
-                      : () => context.read<JuegoBloc>().add(
-                            SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1),
-                          ),
-                ),
-                const SizedBox(width: 30),
-                TextButton(
-                  key: const Key('boton_pasar_turno'),
-                  onPressed: estadoJuego.turnoTerminado
-                      ? null
-                      : () => context.read<JuegoBloc>().add(PasarTurno()),
-                  child: Text(
-                    'Pasar Turno',
-                    style: TextStyle(
-                      color: estadoJuego.turnoTerminado ? Colors.grey : Colors.red,
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _DadoBoton(
+                    key: const ValueKey('dado1'),
+                    valor: estadoJuego.dado1,
+                    esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado1,
+                    idTirada: estadoJuego.idTirada,
+                    onTap: estadoJuego.turnoTerminado
+                        ? () {}
+                        : () => context.read<JuegoBloc>().add(
+                              SeleccionarAncla(estadoJuego.dado1, estadoJuego.dado2),
+                            ),
+                  ),
+                  const SizedBox(width: 18),
+                  _DadoBoton(
+                    key: const ValueKey('dado2'),
+                    valor: estadoJuego.dado2,
+                    esAncla: estadoJuego.anclaSeleccionada == estadoJuego.dado2,
+                    idTirada: estadoJuego.idTirada,
+                    onTap: estadoJuego.turnoTerminado
+                        ? () {}
+                        : () => context.read<JuegoBloc>().add(
+                              SeleccionarAncla(estadoJuego.dado2, estadoJuego.dado1),
+                            ),
+                  ),
+                  const SizedBox(width: 24),
+                  TextButton.icon(
+                    key: const Key('boton_pasar_turno'),
+                    style: TextButton.styleFrom(
+                      backgroundColor: estadoJuego.turnoTerminado
+                          ? Colors.white.withValues(alpha: 0.04)
+                          : Colors.redAccent.withValues(alpha: 0.14),
+                      foregroundColor: estadoJuego.turnoTerminado
+                          ? Colors.white38
+                          : Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: estadoJuego.turnoTerminado
+                              ? Colors.white12
+                              : Colors.redAccent.withValues(alpha: 0.45),
+                        ),
+                      ),
+                    ),
+                    onPressed: estadoJuego.turnoTerminado
+                        ? null
+                        : () => context.read<JuegoBloc>().add(PasarTurno()),
+                    icon: const Icon(Icons.skip_next_rounded, size: 20),
+                    label: const Text(
+                      'Pasar Turno',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       );
     } else if (state is JuegoActivo) {
@@ -107,7 +146,7 @@ class PanelControles extends StatelessWidget {
       final esMultiplayer = bloc.servicioRed != null;
       final esAnfitrion = bloc.esAnfitrion;
 
-      String textoBoton = 'INICIAR';
+      String textoBoton = 'INICIAR PARTIDA';
       bool habilitado = true;
 
       if (esMultiplayer) {
@@ -121,41 +160,53 @@ class PanelControles extends StatelessWidget {
       }
 
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
-        child: ElevatedButton(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+        child: ElevatedButton.icon(
           key: const Key('boton_iniciar_partida'),
+          icon: Icon(habilitado ? Icons.play_arrow_rounded : Icons.hourglass_top_rounded),
           style: ElevatedButton.styleFrom(
-            backgroundColor: habilitado ? Colors.green : Colors.blueGrey[600],
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            backgroundColor: habilitado ? Colors.green[600] : Colors.white12,
+            foregroundColor: habilitado ? Colors.white : Colors.white60,
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            elevation: habilitado ? 8 : 0,
           ),
           onPressed: habilitado
               ? () => context.read<JuegoBloc>().add(ComenzarPartida())
               : null,
-          child: Text(
+          label: Text(
             textoBoton,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: habilitado ? Colors.white : Colors.white70,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
             ),
           ),
         ),
       );
     } else if (state is JuegoEsperandoIniciales) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
         child: ElevatedButton.icon(
           key: const Key('boton_iniciales_aleatorios'),
-          icon: const Icon(Icons.shuffle),
+          icon: const Icon(Icons.shuffle_rounded),
           label: const Text(
-            'Colocar al azar',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            'COLOCAR AL AZAR',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
+            backgroundColor: const Color(0xFF7B2CBF),
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: Colors.purpleAccent.withValues(alpha: 0.5)),
+            ),
+            elevation: 8,
           ),
           onPressed: () {
             context.read<JuegoBloc>().add(ColocarInicialesAleatorios());
@@ -186,7 +237,8 @@ class _DadoBoton extends StatefulWidget {
   State<_DadoBoton> createState() => _DadoBotonState();
 }
 
-class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMixin {
+class _DadoBotonState extends State<_DadoBoton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
   AudioPlayer? _audioPlayer;
 
@@ -245,48 +297,79 @@ class _DadoBotonState extends State<_DadoBoton> with SingleTickerProviderStateMi
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _animController,
-        builder: (context, child) {
-          double angulo = _animController.value * 2 * pi * 2;
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: _animController,
+            builder: (context, child) {
+              double angulo = _animController.value * 2 * pi * 2;
 
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..rotateZ(angulo)
-              ..rotateX(angulo / 2),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: widget.esAncla ? Colors.blue : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: widget.esAncla ? Colors.blue[900]! : Colors.black45,
-                  width: 2,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 4,
-                    offset: Offset(2, 2),
+              return Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.identity()
+                  ..rotateZ(angulo)
+                  ..rotateX(angulo / 2),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: widget.esAncla
+                        ? const LinearGradient(
+                            colors: [Color(0xFF00D2FF), Color(0xFF0066CC)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : const LinearGradient(
+                            colors: [Colors.white, Color(0xFFE2E8F0)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: widget.esAncla ? Colors.white : Colors.black26,
+                      width: widget.esAncla ? 2.5 : 1.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.esAncla
+                            ? Colors.cyanAccent.withValues(alpha: 0.65)
+                            : Colors.black.withValues(alpha: 0.4),
+                        blurRadius: widget.esAncla ? 14 : 6,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  _animController.isAnimating ? '?' : widget.valor.toString(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: widget.esAncla ? Colors.white : Colors.black87,
+                  child: Center(
+                    child: Text(
+                      _animController.isAnimating ? '?' : widget.valor.toString(),
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: widget.esAncla ? Colors.white : const Color(0xFF0F172A),
+                      ),
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: widget.esAncla ? 1.0 : 0.0,
+            child: const Text(
+              'ANCLA',
+              style: TextStyle(
+                color: Colors.cyanAccent,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
               ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
