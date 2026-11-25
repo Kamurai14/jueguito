@@ -373,7 +373,7 @@ class _PantallaLobbyState extends State<PantallaLobby> {
                 const SizedBox(height: 6),
                 Text(
                   widget.esCompetitivo
-                      ? 'Crea una sala clasificatoria (+10 / -4 pts)'
+                      ? 'Crea una sala clasificatoria con puntuación Elo'
                       : 'Elige un mapa y comparte el código con tus amigos',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),

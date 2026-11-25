@@ -603,17 +603,22 @@ class _PantallaTableroState extends State<PantallaTablero>
                                     Builder(
                                       builder: (context) {
                                         final rango = jugador['rango'] as Map;
-                                        final int cambio = rango['cambioPuntos'] ?? 0;
+                                        final int eloNuevo =
+                                            rango['elo'] ?? rango['puntos'] ?? 1000;
+                                        final int cambio =
+                                            rango['cambioElo'] ?? rango['cambioPuntos'] ?? 0;
                                         final String textoCambio =
-                                            cambio >= 0 ? '+$cambio pts' : '$cambio pts';
+                                            cambio >= 0 ? '+$cambio Elo' : '$cambio Elo';
                                         final bool subio = rango['subioDeNivel'] == true;
+                                        final bool bajo = rango['bajoDeNivel'] == true;
 
                                         return Wrap(
                                           spacing: 6,
+                                          runSpacing: 4,
                                           crossAxisAlignment: WrapCrossAlignment.center,
                                           children: [
                                             Text(
-                                              '${rango['nombreNivel']} (${rango['puntos']} pts)',
+                                              '${rango['nombreNivel']} ($eloNuevo Elo)',
                                               style: const TextStyle(
                                                 fontSize: 13,
                                                 color: Colors.white70,
@@ -645,6 +650,26 @@ class _PantallaTableroState extends State<PantallaTablero>
                                                     fontSize: 11,
                                                     fontWeight: FontWeight.bold,
                                                     color: Colors.black,
+                                                  ),
+                                                ),
+                                              ),
+                                            if (bajo)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.redAccent.withValues(alpha: 0.25),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: Colors.redAccent),
+                                                ),
+                                                child: const Text(
+                                                  'DESCENSO',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.redAccent,
                                                   ),
                                                 ),
                                               ),
@@ -718,7 +743,7 @@ class _PantallaTableroState extends State<PantallaTablero>
                           child: Column(
                             children: [
                               Text(
-                                '${estado.cambioRangoPropio!['nombreNivel']} (${estado.cambioRangoPropio!['puntos']} pts)',
+                                '${estado.cambioRangoPropio!['nombreNivel']} (${estado.cambioRangoPropio!['elo'] ?? estado.cambioRangoPropio!['puntos']} Elo)',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -727,7 +752,7 @@ class _PantallaTableroState extends State<PantallaTablero>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '+${estado.cambioRangoPropio!['cambioPuntos']} pts competitivos',
+                                '+${estado.cambioRangoPropio!['cambioElo'] ?? estado.cambioRangoPropio!['cambioPuntos']} Elo',
                                 style: const TextStyle(
                                   color: Colors.greenAccent,
                                   fontSize: 15,

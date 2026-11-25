@@ -201,9 +201,15 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
 
     final int nivelIndex = _perfil!['nivelIndex'] ?? 0;
     final String nombreNivel = _perfil!['nombreNivel'] ?? 'Bronce';
-    final int puntos = _perfil!['puntos'] ?? 0;
+    final int elo = _perfil!['elo'] ?? _perfil!['puntos'] ?? 1000;
+    final int eloMin = _perfil!['eloMinimoNivel'] ?? 1000;
+    final int eloSig = _perfil!['eloSiguienteNivel'] ?? 1150;
     final bool esGranMaestro = nivelIndex >= 6;
     final Color colorRango = _obtenerColorRango(nivelIndex);
+
+    final double progreso = esGranMaestro
+        ? 1.0
+        : ((elo - eloMin) / (eloSig - eloMin)).clamp(0.0, 1.0);
 
     return Container(
       width: double.infinity,
@@ -242,7 +248,11 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
                     children: [
                       const Text(
                         'RANGO ACTUAL',
-                        style: TextStyle(color: Colors.white54, fontSize: 10, letterSpacing: 1.5),
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 10,
+                          letterSpacing: 1.5,
+                        ),
                       ),
                       Text(
                         nombreNivel.toUpperCase(),
@@ -258,7 +268,7 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
                 ],
               ),
               Text(
-                esGranMaestro ? '$puntos pts' : '$puntos / 100 pts',
+                esGranMaestro ? '$elo ELO' : '$elo / $eloSig ELO',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 15,
@@ -272,7 +282,7 @@ class _PantallaMenuPrincipalState extends State<PantallaMenuPrincipal> {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: (puntos / 100).clamp(0.0, 1.0),
+                value: progreso,
                 minHeight: 8,
                 backgroundColor: Colors.black45,
                 valueColor: AlwaysStoppedAnimation<Color>(colorRango),
